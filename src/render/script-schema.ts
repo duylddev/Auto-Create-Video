@@ -1,78 +1,77 @@
 import { z } from "zod";
 
-const KenBurns = z.enum([
-  "zoom-in",
-  "zoom-out",
-  "pan-left-slow",
-  "pan-right-slow",
-  "pan-up-slow",
-  "pan-down-slow",
-]);
+// ── Template data shapes (discriminated by template field) ─────────────────
 
-const GradientPreset = z.enum([
-  "outro-purple",
-  "outro-blue",
-  "news-red",
-  "news-dark",
-]);
-
-const TextPosition = z.enum(["center", "top", "bottom"]);
-const TextStyle = z.enum(["hook-large", "body-medium", "body-small", "outro-card"]);
-const Emphasis = z.enum(["primary", "accent", "channel", "muted"]);
-const Animation = z.enum([
-  "scale-pop",
-  "slide-up",
-  "slide-up-bounce",
-  "slide-down",
-  "slide-left",
-  "slide-right",
-  "fade-in",
-  "fade-in-late",
-  "typewriter",
-]);
-const Effect = z.enum([
-  "flash-white-3f",
-  "particle-burst",
-  "screen-shake-light",
-  "color-flash-accent",
-]);
-
-const BackgroundImage = z.object({
-  type: z.literal("image"),
-  src: z.string(),
-  kenBurns: KenBurns,
+const HookData = z.object({
+  template: z.literal("hook"),
+  headline: z.string().min(1).max(40),
+  subhead: z.string().max(40).optional(),
+  /** background image path (literal "$source.image" → substituted at pipeline level) */
+  bgSrc: z.string().optional(),
+  /** Ken Burns effect class */
+  kenBurns: z.enum(["zoom-in", "zoom-out", "pan-left", "pan-right"]).default("zoom-in"),
 });
 
-const BackgroundGradient = z.object({
-  type: z.literal("gradient"),
-  preset: GradientPreset,
+const ComparisonSide = z.object({
+  label: z.string().min(1).max(30),
+  value: z.string().min(1).max(20),
+  color: z.enum(["cyan", "purple"]),
 });
 
-const Background = z.discriminatedUnion("type", [BackgroundImage, BackgroundGradient]);
-
-const Line = z.object({
-  content: z.string().min(1).max(25, "line.content must be ≤ 25 chars"),
-  emphasis: Emphasis,
-  animation: Animation,
+const ComparisonData = z.object({
+  template: z.literal("comparison"),
+  left: ComparisonSide,
+  right: ComparisonSide.extend({ winner: z.boolean().optional() }),
 });
 
-const Visual = z.object({
-  background: Background,
-  overlay: z.object({ darkness: z.number().min(0).max(1) }).optional(),
-  text: z.object({
-    position: TextPosition,
-    style: TextStyle,
-    lines: z.array(Line).min(1).max(3),
-  }),
-  effects: z.array(Effect).default([]),
+const StatHeroData = z.object({
+  template: z.literal("stat-hero"),
+  value: z.string().min(1).max(20),
+  label: z.string().min(1).max(40),
+  context: z.string().max(50).optional(),
 });
+
+const FeatureListData = z.object({
+  template: z.literal("feature-list"),
+  title: z.string().min(1).max(40),
+  bullets: z.array(z.string().min(1).max(50)).min(1).max(4),
+  icon: z.string().optional(),
+});
+
+const CalloutData = z.object({
+  template: z.literal("callout"),
+  statement: z.string().min(1).max(80),
+  tag: z.string().max(20).optional(),
+});
+
+const OutroData = z.object({
+  template: z.literal("outro"),
+  ctaTop: z.string().min(1).max(30),
+  channelName: z.string().min(1).max(30),
+  source: z.string().min(1).max(40),
+});
+
+export const TemplateData = z.discriminatedUnion("template", [
+  HookData,
+  ComparisonData,
+  StatHeroData,
+  FeatureListData,
+  CalloutData,
+  OutroData,
+]);
+
+export type TemplateDataType = z.infer<typeof TemplateData>;
+
+// ── Scene schema ───────────────────────────────────────────────────────────
 
 const Scene = z.object({
   id: z.string().min(1),
   type: z.enum(["hook", "body", "outro"]),
   voiceText: z.string().min(1),
-  visual: Visual,
+  templateData: TemplateData,
 });
+
+// ── Root schema ────────────────────────────────────────────────────────────
 
 export const ScriptSchema = z.object({
   version: z.literal("1.0"),

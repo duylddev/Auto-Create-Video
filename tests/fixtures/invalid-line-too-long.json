@@ -19,165 +19,50 @@
       "id": "hook",
       "type": "hook",
       "voiceText": "Apple vừa ra mắt iPhone 17 với camera hai trăm megapixel.",
-      "visual": {
-        "background": {
-          "type": "image",
-          "src": "$source.image",
-          "kenBurns": "zoom-in"
-        },
-        "overlay": {
-          "darkness": 0.4
-        },
-        "text": {
-          "position": "center",
-          "style": "hook-large",
-          "lines": [
-            {
-              "content": "This is a very long line of text definitely over twenty five characters",
-              "emphasis": "primary",
-              "animation": "scale-pop"
-            },
-            {
-              "content": "Camera 200MP!",
-              "emphasis": "accent",
-              "animation": "slide-up-bounce"
-            }
-          ]
-        },
-        "effects": [
-          "flash-white-3f",
-          "particle-burst"
-        ]
+      "templateData": {
+        "template": "hook",
+        "headline": "This hook headline is way too long and definitely exceeds forty characters limit set by schema",
+        "subhead": "Camera 200MP!"
       }
     },
     {
       "id": "body-1",
       "type": "body",
       "voiceText": "Theo Apple, máy được trang bị cảm biến hoàn toàn mới có khả năng zoom quang học gấp mười lần.",
-      "visual": {
-        "background": {
-          "type": "image",
-          "src": "$source.image",
-          "kenBurns": "pan-left-slow"
-        },
-        "overlay": {
-          "darkness": 0.3
-        },
-        "text": {
-          "position": "bottom",
-          "style": "body-medium",
-          "lines": [
-            {
-              "content": "Cảm biến mới",
-              "emphasis": "primary",
-              "animation": "slide-up"
-            },
-            {
-              "content": "Zoom 10x",
-              "emphasis": "accent",
-              "animation": "fade-in-late"
-            }
-          ]
-        },
-        "effects": []
+      "templateData": {
+        "template": "stat-hero",
+        "value": "200MP",
+        "label": "Cảm biến mới"
       }
     },
     {
       "id": "body-2",
       "type": "body",
-      "voiceText": "Pin được nâng cấp lên năm nghìn miliampe giờ, tăng ba mươi phần trăm so với đời cũ.",
-      "visual": {
-        "background": {
-          "type": "image",
-          "src": "$source.image",
-          "kenBurns": "zoom-out"
-        },
-        "overlay": {
-          "darkness": 0.3
-        },
-        "text": {
-          "position": "center",
-          "style": "body-medium",
-          "lines": [
-            {
-              "content": "Pin 5000mAh",
-              "emphasis": "primary",
-              "animation": "scale-pop"
-            },
-            {
-              "content": "+30%",
-              "emphasis": "accent",
-              "animation": "slide-left"
-            }
-          ]
-        },
-        "effects": [
-          "color-flash-accent"
-        ]
+      "voiceText": "Pin được nâng cấp lên năm nghìn miliampe giờ.",
+      "templateData": {
+        "template": "feature-list",
+        "title": "Nâng cấp",
+        "bullets": ["Pin 5000mAh"]
       }
     },
     {
       "id": "body-3",
       "type": "body",
-      "voiceText": "Giá khởi điểm là hai mươi mốt triệu đồng, dự kiến mở bán tại Việt Nam vào tháng sau.",
-      "visual": {
-        "background": {
-          "type": "image",
-          "src": "$source.image",
-          "kenBurns": "pan-right-slow"
-        },
-        "overlay": {
-          "darkness": 0.4
-        },
-        "text": {
-          "position": "top",
-          "style": "body-medium",
-          "lines": [
-            {
-              "content": "Từ 21 triệu",
-              "emphasis": "primary",
-              "animation": "slide-down"
-            },
-            {
-              "content": "Mở bán tháng 5",
-              "emphasis": "muted",
-              "animation": "fade-in"
-            }
-          ]
-        },
-        "effects": []
+      "voiceText": "Giá khởi điểm là hai mươi mốt triệu đồng.",
+      "templateData": {
+        "template": "callout",
+        "statement": "Giá từ 21 triệu đồng."
       }
     },
     {
       "id": "outro",
       "type": "outro",
       "voiceText": "Theo dõi Công nghệ 24h để xem bản tin mới mỗi ngày.",
-      "visual": {
-        "background": {
-          "type": "gradient",
-          "preset": "outro-purple"
-        },
-        "text": {
-          "position": "center",
-          "style": "outro-card",
-          "lines": [
-            {
-              "content": "Xem bản tin mới mỗi ngày",
-              "emphasis": "primary",
-              "animation": "fade-in"
-            },
-            {
-              "content": "Công nghệ 24h",
-              "emphasis": "channel",
-              "animation": "scale-pop"
-            },
-            {
-              "content": "Nguồn: vnexpress.net",
-              "emphasis": "muted",
-              "animation": "fade-in-late"
-            }
-          ]
-        }
+      "templateData": {
+        "template": "outro",
+        "ctaTop": "Theo dõi ngay",
+        "channelName": "Công nghệ 24h",
+        "source": "vnexpress.net"
       }
     }
   ]

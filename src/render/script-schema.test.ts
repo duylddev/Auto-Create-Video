@@ -23,7 +23,8 @@ describe("ScriptSchema", () => {
   });
 
   it("rejects invalid-line-too-long.json", () => {
-    expect(() => ScriptSchema.parse(load("invalid-line-too-long.json"))).toThrow(/25/);
+    // headline is over 40 chars — Zod error references the max value
+    expect(() => ScriptSchema.parse(load("invalid-line-too-long.json"))).toThrow(/40/);
   });
 
   it("requires hook + outro present", () => {
