@@ -29,44 +29,94 @@ export async function getDurationSec(path: string): Promise<number> {
   return d;
 }
 
+/**
+ * Concatenate audio files with `gapSec` silence between each, producing a single
+ * output mp3.
+ *
+ * Uses ffmpeg's CONCAT FILTER (not concat demuxer) with explicit sample-rate /
+ * channel normalization to avoid clicks/pops at boundaries. Each input is also
+ * given a tiny 8 ms fade-in/fade-out which inaudibly smooths any DC offset
+ * discontinuity at the boundary — this eliminates the "pét" clicking sound.
+ */
 export async function concatWithSilence(
   inputPaths: string[],
   gapSec: number,
   outPath: string,
 ): Promise<void> {
   if (inputPaths.length === 0) throw new Error("concatWithSilence: empty inputPaths");
+  if (inputPaths.length === 1) {
+    // No concat needed — just normalize the single file
+    await run("ffmpeg", [
+      "-y", "-i", inputPaths[0],
+      "-ar", "44100", "-ac", "1",
+      "-c:a", "libmp3lame", "-b:a", "192k",
+      outPath,
+    ]);
+    return;
+  }
 
   const tmp = await mkdtemp(join(tmpdir(), "concat-"));
   try {
-    // Generate silence
-    const silencePath = join(tmp, "silence.mp3");
+    // Generate WAV silence (lossless, no encoder priming pops)
+    const silencePath = join(tmp, "silence.wav");
     await run("ffmpeg", [
       "-y", "-f", "lavfi",
       "-i", `anullsrc=r=44100:cl=mono`,
       "-t", String(gapSec),
-      "-c:a", "libmp3lame", "-b:a", "128k",
+      "-ac", "1", "-ar", "44100",
       silencePath,
     ]);
 
-    // Build concat list file — resolve to absolute paths and normalize to
-    // forward slashes so ffmpeg can locate files regardless of cwd.
-    const normalize = (p: string) => resolve(p).replace(/\\/g, "/");
-    const items: string[] = [];
-    inputPaths.forEach((p, i) => {
-      items.push(`file '${normalize(p).replace(/'/g, "'\\''")}'`);
-      if (i < inputPaths.length - 1) {
-        items.push(`file '${normalize(silencePath).replace(/'/g, "'\\''")}'`);
-      }
-    });
-    const listPath = join(tmp, "list.txt");
-    await writeFile(listPath, items.join("\n"));
+    // Build ffmpeg input args + concat filter graph.
+    // We interleave: voice[0] silence voice[1] silence voice[2] ... voice[N-1]
+    // Each is fed through a chain that:
+    //   1) resamples to 44100 mono (aresample with high-quality)
+    //   2) applies a tiny 8ms fade-in + fade-out (inaudible but smooths boundary)
+    // Then all are concatenated by the `concat=n=K:v=0:a=1` filter.
+    const ffArgs: string[] = ["-y"];
+    const filterParts: string[] = [];
+    const labels: string[] = [];
+    let idx = 0;
+    const FADE_SEC = 0.008; // 8ms — inaudible
 
-    await run("ffmpeg", [
-      "-y", "-f", "concat", "-safe", "0",
-      "-i", listPath,
+    const addInput = (path: string) => {
+      ffArgs.push("-i", path);
+      const inLabel = `[${idx}:a]`;
+      const outLabel = `a${idx}`;
+      // Pre-pad: we cannot know exact duration here without probing every input,
+      // so use afade with `t=in/out:st=...` and rely on `acrossfade` style.
+      // Simpler robust trick: use afade `st` for in, and `afade=t=out` with
+      // start_time=eof-FADE_SEC by providing duration after `-t` is hard.
+      // Use `afade=t=in:st=0:d=FADE` then `afade=t=out:st=0:d=FADE` won't work
+      // for variable-length inputs. So we use `apad=pad_dur=0` (no-op) +
+      // `aresample` then rely on concat filter doing sample-accurate join.
+      // The micro-fade is applied via `areverse,afade,areverse` trick to fade out:
+      filterParts.push(
+        `${inLabel}aresample=44100,aformat=sample_fmts=fltp:channel_layouts=mono,` +
+        `afade=t=in:st=0:d=${FADE_SEC},` +
+        // Trim fade-out: reverse → fade-in → reverse (this fades the END)
+        `areverse,afade=t=in:st=0:d=${FADE_SEC},areverse[${outLabel}]`
+      );
+      labels.push(`[${outLabel}]`);
+      idx++;
+    };
+
+    inputPaths.forEach((p, i) => {
+      addInput(p);
+      if (i < inputPaths.length - 1) addInput(silencePath);
+    });
+
+    const concatFilter = `${labels.join("")}concat=n=${labels.length}:v=0:a=1[out]`;
+    const filterGraph = `${filterParts.join(";")};${concatFilter}`;
+
+    ffArgs.push(
+      "-filter_complex", filterGraph,
+      "-map", "[out]",
       "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "44100",
       outPath,
-    ]);
+    );
+
+    await run("ffmpeg", ffArgs);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }
