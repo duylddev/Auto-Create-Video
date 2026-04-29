@@ -2,10 +2,8 @@
 html, body { width: 1080px; height: 1920px; overflow: hidden; background: #000; font-family: 'Inter', 'Noto Sans', sans-serif; }
 #stage { position: relative; width: 1080px; height: 1920px; }
 
-/* HyperFrames clip visibility — the runtime manages .clip visibility via data-start/data-duration.
-   We also support a manual data-active fallback for when animations.js drives scene switching. */
+/* Default invisible — GSAP timeline (animations.js) sets opacity:1 at scene start, opacity:0 at end. */
 .scene { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
-.scene[data-active="1"] { opacity: 1; }
 
 .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
 .bg.kb-zoom-in    { animation: kb-zoom-in    var(--scene-dur) linear forwards; }

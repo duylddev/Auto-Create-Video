@@ -24,7 +24,11 @@
 
     {{SCENES}}
   </div>
-  <script>window.__timelines = window.__timelines || {};</script>
+  <script>
+    // Create + register timeline synchronously so HyperFrames runtime can find it
+    window.__timelines = window.__timelines || {};
+    window.__timelines["news-video"] = gsap.timeline({ paused: true });
+  </script>
   <script src="animations.js"></script>
 </body>
 </html>
