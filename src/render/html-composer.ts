@@ -2,12 +2,20 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Script, TemplateDataType } from "./script-schema.js";
+import type { TiktokConfig } from "../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TPL_DIR = join(__dirname, "templates");
 
 // Grain overlay HTML inline (from installed component)
 const GRAIN_OVERLAY_HTML = `<div id="grain-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;"><div class="grain-texture"></div></div>`;
+
+// Default TikTok config (used if not passed)
+const DEFAULT_TIKTOK: TiktokConfig = {
+  displayName: "Công nghệ 24h",
+  handle: "@congnghe24h",
+  followers: "1.2M followers",
+};
 
 export interface SceneAudio {
   id: string;
@@ -20,10 +28,16 @@ export interface ComposeArgs {
   gapSec: number;
   bgImageRelPath: string | null;   // null => no image available
   audioRelPath: string;
+  /** TikTok follow card config (injected into outro scene). Optional — defaults used if omitted. */
+  tiktok?: TiktokConfig;
+  /** Relative path to avatar image inside the output dir (e.g. "tiktok-avatar.jpg"). */
+  tiktokAvatarRelPath?: string;
 }
 
 export function composeHtml(args: ComposeArgs): string {
   const { script, sceneAudio, gapSec, bgImageRelPath, audioRelPath } = args;
+  const tiktok = args.tiktok ?? DEFAULT_TIKTOK;
+  const tiktokAvatar = args.tiktokAvatarRelPath ?? "tiktok-avatar.jpg";
 
   // Compute timing per scene
   let cursor = 0;
@@ -39,11 +53,11 @@ export function composeHtml(args: ComposeArgs): string {
 
   // Render scenes
   const sceneHtml = timing.map(({ scene, start, duration }) => {
-    return renderScene(scene, start, duration, bgImageRelPath);
+    return renderScene(scene, start, duration, bgImageRelPath, tiktok, tiktokAvatar);
   }).join("\n");
 
-  // Persistent shell
-  const shellHtml = renderShell(script.metadata);
+  // Persistent shell — uses tiktok handle in footer
+  const shellHtml = renderShell(script.metadata, tiktok);
 
   const animJs = readFileSync(join(TPL_DIR, "animations.js"), "utf8");
 
@@ -58,9 +72,10 @@ export function composeHtml(args: ComposeArgs): string {
 }
 
 // ── PERSISTENT SHELL ───────────────────────────────────────────────────────
-function renderShell(metadata: Script["metadata"]): string {
+function renderShell(metadata: Script["metadata"], tiktok: TiktokConfig): string {
   const channel = escapeHtml(metadata.channel);
   const domain = escapeHtml(metadata.source.domain);
+  const handle = escapeHtml(tiktok.handle);
   return `
 <!-- Shell: persistent brand elements (no data-start → always visible) -->
 <div class="shell-bg"></div>
@@ -75,7 +90,7 @@ function renderShell(metadata: Script["metadata"]): string {
 
 <div class="brand-shell-handle">
   <span class="handle-music">&#9835;</span>
-  <span class="handle-text">@congnghe24h</span>
+  <span class="handle-text">${handle}</span>
 </div>
 
 <div class="brand-shell-keyword">
@@ -91,6 +106,8 @@ function renderScene(
   start: number,
   duration: number,
   bgImageRelPath: string | null,
+  tiktok: TiktokConfig,
+  tiktokAvatarRelPath: string,
 ): string {
   const td = scene.templateData;
 
@@ -119,7 +136,7 @@ function renderScene(
       layoutName = "callout";
       break;
     case "outro":
-      inner = renderOutroInner(td);
+      inner = renderOutroInner(td, tiktok, tiktokAvatarRelPath);
       layoutName = "outro";
       break;
     default: {
@@ -221,13 +238,43 @@ function renderCalloutInner(td: Extract<TemplateDataType, { template: "callout" 
 }
 
 // ── OUTRO SCENE ────────────────────────────────────────────────────────────
-function renderOutroInner(td: Extract<TemplateDataType, { template: "outro" }>): string {
+function renderOutroInner(
+  td: Extract<TemplateDataType, { template: "outro" }>,
+  tiktok: TiktokConfig,
+  avatarRelPath: string,
+): string {
+  const ttCard = renderTiktokCard(tiktok, avatarRelPath);
   return `
 <div class="layout-outro">
   <div class="out-cta-top">${escapeHtml(td.ctaTop)}</div>
   <div class="out-channel">${escapeHtml(td.channelName)}</div>
   <div class="out-underline"></div>
   <div class="out-source">Nguồn: ${escapeHtml(td.source)}</div>
+</div>
+${ttCard}`.trim();
+}
+
+/**
+ * TikTok follow card — adapted from HyperFrames `tiktok-follow` block.
+ * Slides up from bottom mid-outro. Animations are added by animations.js
+ * targeting elements with id="tt-card", id="tt-follow-btn", etc.
+ */
+function renderTiktokCard(tiktok: TiktokConfig, avatarRelPath: string): string {
+  return `
+<div id="tt-card" class="tt-card">
+  <img class="tt-avatar" src="${escapeHtml(avatarRelPath)}" alt="${escapeHtml(tiktok.displayName)}" crossorigin="anonymous" />
+  <div class="tt-profile-info">
+    <div class="tt-display-name">${escapeHtml(tiktok.displayName)}</div>
+    <div class="tt-handle">${escapeHtml(tiktok.handle)}</div>
+    <div class="tt-followers">${escapeHtml(tiktok.followers)}</div>
+  </div>
+  <div id="tt-follow-btn" class="tt-follow-btn">
+    <span id="tt-btn-follow" class="tt-btn-text">Follow</span>
+    <span id="tt-btn-following" class="tt-btn-text tt-btn-text-following">
+      <span>Following</span>
+      <span class="tt-check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+    </span>
+  </div>
 </div>`.trim();
 }
 

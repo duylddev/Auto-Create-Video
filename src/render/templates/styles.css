@@ -435,3 +435,74 @@ html, body {
 .fx.flash-white-3f     { background: #fff; }
 .fx.particle-burst     { background: radial-gradient(circle at center, rgba(34,211,238,0.9) 0%, transparent 60%); }
 .fx.color-flash-accent { background: rgba(168,85,247,0.4); }
+
+/* ── TIKTOK FOLLOW CARD (outro overlay) ──────────────────────────────────
+   Adapted from HyperFrames hyperframes:block tiktok-follow.
+   Card slides up from bottom during outro scene. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=block');
+
+.tt-card {
+  position: absolute;
+  bottom: 360px;            /* above the brand-shell-handle */
+  left: 50%;
+  transform: translate(-50%, 300px);   /* start off-screen below */
+  display: flex; align-items: center; gap: 30px;
+  background: #1a1a1a;
+  border-radius: 75px;
+  padding: 25px 40px 25px 25px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 60px rgba(254,44,85,0.15);
+  font-family: 'DM Sans', sans-serif;
+  opacity: 0;
+  z-index: 60;
+}
+
+.tt-avatar {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 3px solid #333;
+}
+
+.tt-profile-info {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-right: 20px;
+}
+
+.tt-display-name {
+  font-size: 42px; font-weight: 700; color: #ffffff;
+  line-height: 1.3; letter-spacing: -0.01em;
+}
+.tt-handle {
+  font-size: 28px; font-weight: 400; color: #a0a0a0;
+  line-height: 1.3;
+}
+.tt-followers {
+  font-size: 25px; font-weight: 400; color: #737373;
+  line-height: 1.3;
+}
+
+.tt-follow-btn {
+  position: relative;
+  width: 250px; height: 80px;
+  border-radius: 40px;
+  background: #fe2c55;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+.tt-btn-text {
+  position: absolute;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 30px; font-weight: 700; color: #ffffff;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tt-btn-text-following {
+  opacity: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.tt-check-icon { display: inline-block; width: 22px; height: 22px; }
+.tt-check-icon svg { width: 22px; height: 22px; display: block; }

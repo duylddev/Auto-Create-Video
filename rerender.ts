@@ -34,7 +34,9 @@ async function main() {
 
   // Load script.json
   const raw = JSON.parse(await readFile(join(outputDir, "script.json"), "utf8"));
-  if (raw.voice?.voiceId === "${VIETNAMESE_VOICEID}") raw.voice.voiceId = cfg.voiceId;
+  if (raw.voice?.voiceId === "${VIETNAMESE_VOICEID}" || raw.voice?.voiceId === "${VOICE_ID}") {
+    raw.voice.voiceId = cfg.ttsProvider === "lucylab" ? cfg.lucylabVoiceId! : cfg.elevenlabsVoiceId!;
+  }
   const script = ScriptSchema.parse(raw);
 
   // Probe per-scene durations from existing voice files
@@ -59,6 +61,14 @@ async function main() {
   const bgImageRelPath = fs.existsSync(bgImagePath) ? "images/bg.jpg" : null;
   console.log(`bgImage: ${bgImageRelPath ?? "(none — gradient fallback)"}`);
 
+  // TikTok avatar — copy bundled default if not already in output dir
+  const ttAvatarFile = "tiktok-avatar.jpg";
+  const ttAvatarOut = join(outputDir, ttAvatarFile);
+  const fs2 = await import("node:fs");
+  if (!fs2.existsSync(ttAvatarOut)) {
+    await copyFile(join(__dirname, "assets", "avatar.jpg"), ttAvatarOut);
+  }
+
   // Compose HTML
   const html = composeHtml({
     script,
@@ -66,6 +76,8 @@ async function main() {
     gapSec: SCENE_GAP_SEC,
     bgImageRelPath,
     audioRelPath: "voice.mp3",
+    tiktok: cfg.tiktok,
+    tiktokAvatarRelPath: ttAvatarFile,
   });
   await writeFile(join(outputDir, "index.html"), html);
   await writeFile(join(outputDir, "hyperframes.json"), JSON.stringify(HYPERFRAMES_CONFIG, null, 2));

@@ -154,5 +154,40 @@ window.__timelines["news-video"] = tl;
     if (source) {
       tl.fromTo(source, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4 }, start + 1.3);
     }
+
+    // ── TikTok follow card animation (last ~3.5s of outro) ──────────────
+    // Adapted from HyperFrames `tiktok-follow` block.
+    // Card lives inside the outro scene (id="tt-card"); slide up + button click sequence.
+    const ttCard = scene.querySelector("#tt-card");
+    if (ttCard) {
+      const ttBtn      = scene.querySelector("#tt-follow-btn");
+      const ttFollow   = scene.querySelector("#tt-btn-follow");
+      const ttFollwing = scene.querySelector("#tt-btn-following");
+      const ttBase     = start + 1.6;  // start TikTok sequence 1.6s into outro
+
+      // Slide in from bottom + fade in
+      tl.fromTo(ttCard,
+        { opacity: 0, y: 300 },
+        { opacity: 1, y: 0, duration: 0.5 },
+        ttBase
+      );
+
+      // Button press (scale down)
+      if (ttBtn) {
+        tl.to(ttBtn, { scale: 0.92, duration: 0.15 }, ttBase + 0.9);
+        // Release with slight bounce (use scale up)
+        tl.to(ttBtn, { scale: 1, duration: 0.4 }, ttBase + 1.05);
+      }
+
+      // Swap "Follow" → "Following" (opacity)
+      if (ttFollow) {
+        tl.to(ttFollow, { opacity: 0, duration: 0.08 }, ttBase + 1.05);
+      }
+      if (ttFollwing) {
+        tl.to(ttFollwing, { opacity: 1, duration: 0.08 }, ttBase + 1.08);
+      }
+
+      // Card stays visible until end of scene (no slide-out — feels more like a CTA)
+    }
   }
 })();

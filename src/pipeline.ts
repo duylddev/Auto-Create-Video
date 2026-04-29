@@ -97,12 +97,28 @@ export async function runPipeline(scriptPath: string): Promise<void> {
 
   // STEP 6 — Compose HTML + write hyperframes project files
   log.step(6, TOTAL_STEPS, "Compose HTML + project files");
+
+  // Resolve TikTok avatar — download URL if provided, else copy bundled default
+  const ttAvatarFile = "tiktok-avatar.jpg";
+  const ttAvatarOut = join(outputDir, ttAvatarFile);
+  if (cfg.tiktok.avatarUrl) {
+    const r = await fetchImage(cfg.tiktok.avatarUrl, ttAvatarOut);
+    if (!r.success) {
+      log.warn(`TikTok avatar download failed: ${r.reason} → falling back to bundled default`);
+      await copyFile(join(__dirname, "..", "assets", "avatar.jpg"), ttAvatarOut);
+    }
+  } else {
+    await copyFile(join(__dirname, "..", "assets", "avatar.jpg"), ttAvatarOut);
+  }
+
   const html = composeHtml({
     script,
     sceneAudio: sceneAudio.map((a) => ({ id: a.id, durationSec: a.durationSec })),
     gapSec: SCENE_GAP_SEC,
     bgImageRelPath,
     audioRelPath: "voice.mp3",
+    tiktok: cfg.tiktok,
+    tiktokAvatarRelPath: ttAvatarFile,
   });
 
   // hyperframes expects: index.html (NOT composition.html), hyperframes.json, meta.json in DIR

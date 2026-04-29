@@ -2,6 +2,14 @@ import "dotenv/config";
 
 export type TtsProvider = "lucylab" | "elevenlabs";
 
+export interface TiktokConfig {
+  displayName: string;
+  handle: string;
+  followers: string;
+  /** URL to download avatar JPG. If undefined, the bundled `assets/avatar.jpg` is used. */
+  avatarUrl?: string;
+}
+
 export interface Config {
   ttsProvider: TtsProvider;
 
@@ -17,6 +25,9 @@ export interface Config {
   elevenlabsVoiceId?: string;
   elevenlabsModelId: string;
   elevenlabsEndpoint: string;
+
+  // TikTok follow card (outro)
+  tiktok: TiktokConfig;
 
   ttsConcurrency: number;
 }
@@ -75,6 +86,12 @@ export function loadConfig(): Config {
     elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
     elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
     elevenlabsEndpoint: process.env.ELEVENLABS_ENDPOINT ?? "https://api.elevenlabs.io/v1",
+    tiktok: {
+      displayName: process.env.TIKTOK_DISPLAY_NAME ?? "Công nghệ 24h",
+      handle: process.env.TIKTOK_HANDLE ?? "@congnghe24h",
+      followers: process.env.TIKTOK_FOLLOWERS ?? "1.2M followers",
+      avatarUrl: process.env.TIKTOK_AVATAR_URL || undefined,
+    },
     ttsConcurrency: intDefault("TTS_CONCURRENCY", 1),
   };
 }

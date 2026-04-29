@@ -193,6 +193,30 @@ ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 ```
 
+### 🎵 Cấu hình TikTok follow card (outro)
+
+Mỗi video tự động kết thúc với một **TikTok follow card** (slide từ dưới lên + animation click follow) — chuẩn HyperFrames style. Tất cả là tùy chọn — defaults work out of the box:
+
+```env
+TIKTOK_DISPLAY_NAME=Công nghệ 24h
+TIKTOK_HANDLE=@congnghe24h
+TIKTOK_FOLLOWERS=1.2M followers
+
+# Tùy chọn: URL ảnh avatar TikTok thật của bạn (jpg/png, vuông, ≥256x256)
+# Nếu không set → dùng default `assets/avatar.jpg` đã bundled
+TIKTOK_AVATAR_URL=https://example.com/your-avatar.jpg
+```
+
+**Cách thay avatar:**
+- **Cách 1 (đơn giản)**: thay file `assets/avatar.jpg` bằng ảnh của bạn (square, ~256x256+)
+- **Cách 2 (URL)**: set `TIKTOK_AVATAR_URL` trong `.env.local` → pipeline tự download mỗi lần render
+
+Card xuất hiện ở giây thứ ~1.6 trong scene outro với chuỗi animation:
+1. Card slide từ bottom lên (0.5s)
+2. Hold ~0.9s để người xem đọc
+3. Button "Follow" press-in + chuyển sang "Following ✓" với màu chuyển từ đỏ → xám đen
+4. Card stay visible đến hết video
+
 ### 🎬 Sử dụng
 
 #### Cách 1: Trong Claude Code (khuyến nghị)
@@ -487,6 +511,30 @@ ELEVENLABS_API_KEY=sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 ```
+
+### 🎵 TikTok follow card configuration (outro)
+
+Every video automatically ends with a **TikTok follow card** (slides up from bottom + follow-button click animation) — built from the official HyperFrames `tiktok-follow` block. All fields optional — defaults work out of the box:
+
+```env
+TIKTOK_DISPLAY_NAME=Công nghệ 24h
+TIKTOK_HANDLE=@congnghe24h
+TIKTOK_FOLLOWERS=1.2M followers
+
+# Optional: URL to your real TikTok avatar (jpg/png, square, ≥256x256)
+# If not set → uses bundled default `assets/avatar.jpg`
+TIKTOK_AVATAR_URL=https://example.com/your-avatar.jpg
+```
+
+**To change the avatar:**
+- **Option 1 (simple)**: replace `assets/avatar.jpg` with your image (square, ~256x256+)
+- **Option 2 (URL)**: set `TIKTOK_AVATAR_URL` in `.env.local` → pipeline auto-downloads on every render
+
+Card appears at ~1.6s into the outro scene with this animation sequence:
+1. Card slides up from bottom (0.5s)
+2. Hold ~0.9s for viewer to read
+3. "Follow" button press-in + transitions to "Following ✓" with red→dark-gray color shift
+4. Card stays visible until end of video
 
 ### 🎬 Usage
 
