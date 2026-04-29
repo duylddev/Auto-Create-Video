@@ -25,6 +25,10 @@ describe("composeHtml", () => {
     expect(html).toContain('data-composition-id="news-video"');
     expect(html).toContain('data-width="1080"');
     expect(html).toContain('data-height="1920"');
+    expect(html).toContain('data-start="0"');           // root composition timing
+    expect(html).toContain('id="voice"');               // audio element discoverable by hyperframes
+    expect(html).toContain('class="scene clip"');       // clip class required for hyperframes visibility
+    expect(html).toContain('window.__timelines');       // timeline registry stub
     expect(html).toContain('class="bg kb-zoom-in"');
     expect(html).toContain("background-image: url('images/bg.jpg')");
     expect(html).toContain('class="line style-hook-large emp-primary"');

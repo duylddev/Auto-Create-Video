@@ -60,7 +60,7 @@ function renderScene(
   const fx = (scene.visual.effects ?? []).map((e) => `<div class="fx ${e}"></div>`).join("");
 
   return `
-<div class="scene" id="scene-${scene.id}"
+<div class="scene clip" id="scene-${scene.id}"
      data-start="${start.toFixed(2)}" data-duration="${duration.toFixed(2)}" data-active="0">
   ${bg}
   ${overlay}

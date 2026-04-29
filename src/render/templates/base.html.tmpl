@@ -12,9 +12,11 @@
        data-composition-id="news-video"
        data-width="1080"
        data-height="1920"
+       data-start="0"
        data-duration="{{TOTAL_DURATION}}">
 
-    <audio class="clip"
+    <audio id="voice"
+           class="clip"
            data-start="0"
            data-duration="{{TOTAL_DURATION}}"
            data-track-index="0"
@@ -22,6 +24,7 @@
 
     {{SCENES}}
   </div>
+  <script>window.__timelines = window.__timelines || {};</script>
   <script src="animations.js"></script>
 </body>
 </html>
