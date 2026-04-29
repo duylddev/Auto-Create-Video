@@ -7,6 +7,7 @@ import { loadConfig } from "./config.js";
 import { createTtsClient } from "./tts/tts-client.js";
 import { fetchImage } from "./assets/image-fetcher.js";
 import { getDurationSec, concatWithSilence, mixSfxOntoVoice, type SfxMixSpec } from "./assets/audio-tools.js";
+import { indexSfxLibrary, pickSfxForScene, defaultPlayback } from "./assets/sfx-selector.js";
 import { existsSync } from "node:fs";
 import { composeHtml } from "./render/html-composer.js";
 import { renderWithHyperframes } from "./render/hyperframes-runner.js";
@@ -28,22 +29,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TPL_DIR = join(__dirname, "render", "templates");
 /** Path to the SFX library (relative to project root) */
 const SFX_DIR = join(__dirname, "..", "assets", "sfx");
-
-/**
- * Default SFX mapping per scene template.
- * Each scene gets one SFX played at scene start (offset 0.1s for natural feel).
- * Set to null to disable for that template.
- *
- * Files must exist in `assets/sfx/<name>.mp3`. Missing files are silently skipped.
- */
-const DEFAULT_SFX: Record<string, { name: string; volume: number; offsetSec: number } | null> = {
-  hook:           { name: "transition/whoosh-soft", volume: 0.45, offsetSec: 0.0 },
-  comparison:     { name: "transition/swoosh",     volume: 0.35, offsetSec: 0.1 },
-  "stat-hero":    { name: "emphasis/ding",         volume: 0.30, offsetSec: 0.2 },
-  "feature-list": { name: "transition/pop",        volume: 0.30, offsetSec: 0.1 },
-  callout:        { name: "alert/notification",    volume: 0.30, offsetSec: 0.1 },
-  outro:          { name: "outro/tada",            volume: 0.30, offsetSec: 0.5 },
-};
 
 const HYPERFRAMES_CONFIG = {
   $schema: "https://hyperframes.heygen.com/schema/hyperframes.json",
@@ -125,37 +110,52 @@ export async function runPipeline(scriptPath: string): Promise<void> {
     cursor += a.durationSec + SCENE_GAP_SEC;
   }
 
-  // Build SFX mix list: per scene, pick override or template default
+  // Build SFX mix list using smart 3-tier selector
+  const sfxIndex = indexSfxLibrary(SFX_DIR);
+  const indexCats = Object.keys(sfxIndex).length;
+  const indexFiles = Object.values(sfxIndex).reduce((s, a) => s + a.length, 0);
+  log.info(`  SFX library: ${indexFiles} files in ${indexCats} categories`);
+
   const sfxList: SfxMixSpec[] = [];
   for (const scene of script.scenes) {
     const startSec = sceneStarts[scene.id];
-    const tmpl = scene.templateData.template;
 
-    let sfxName: string | null;
-    let volume: number;
-    let offsetSec: number;
-
+    // Tier 1: explicit override in script.json
     if (scene.sfx) {
-      // Explicit override
-      if (scene.sfx.name === "none") continue;
-      sfxName = scene.sfx.name;
-      volume = scene.sfx.volume;
-      offsetSec = scene.sfx.startOffsetSec;
-    } else {
-      // Template default
-      const def = DEFAULT_SFX[tmpl];
-      if (!def) continue;
-      sfxName = def.name;
-      volume = def.volume;
-      offsetSec = def.offsetSec;
-    }
-
-    const sfxPath = join(SFX_DIR, `${sfxName}.mp3`);
-    if (!existsSync(sfxPath)) {
-      log.warn(`SFX not found, skipping: ${sfxName}.mp3`);
+      if (scene.sfx.name === "none") {
+        log.info(`  scene ${scene.id}: SFX disabled (explicit "none")`);
+        continue;
+      }
+      const sfxPath = join(SFX_DIR, `${scene.sfx.name}.mp3`);
+      if (existsSync(sfxPath)) {
+        sfxList.push({ path: sfxPath, startSec: startSec + scene.sfx.startOffsetSec, volume: scene.sfx.volume });
+        log.info(`  scene ${scene.id}: SFX override -> ${scene.sfx.name}.mp3`);
+      } else {
+        log.warn(`  scene ${scene.id}: explicit SFX not found, skipping: ${scene.sfx.name}.mp3`);
+      }
       continue;
     }
-    sfxList.push({ path: sfxPath, startSec: startSec + offsetSec, volume });
+
+    // Tier 2/3: smart selection by content + template
+    const picked = pickSfxForScene({
+      voiceText: scene.voiceText,
+      templateName: scene.templateData.template,
+      sceneId: scene.id,
+      index: sfxIndex,
+    });
+    if (!picked) {
+      log.warn(`  scene ${scene.id}: no SFX available (empty library?)`);
+      continue;
+    }
+
+    const sfxPath = join(SFX_DIR, picked.relPath);
+    const playback = defaultPlayback(picked);
+    sfxList.push({ path: sfxPath, startSec: startSec + playback.offsetSec, volume: playback.volume });
+
+    const why = picked.source === "semantic"
+      ? `semantic match "${picked.matchedKeyword}"`
+      : picked.source;
+    log.info(`  scene ${scene.id}: SFX -> ${picked.relPath} (${why})`);
   }
   log.info(`  mixing ${sfxList.length} SFX into voice.mp3`);
   await mixSfxOntoVoice(voiceRawMp3, sfxList, voiceMp3);

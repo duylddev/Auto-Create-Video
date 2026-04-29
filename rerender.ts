@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { ScriptSchema } from "./src/render/script-schema.js";
 import { loadConfig } from "./src/config.js";
 import { getDurationSec, concatWithSilence, mixSfxOntoVoice, type SfxMixSpec } from "./src/assets/audio-tools.js";
+import { indexSfxLibrary, pickSfxForScene, defaultPlayback } from "./src/assets/sfx-selector.js";
 import { existsSync } from "node:fs";
 import { composeHtml } from "./src/render/html-composer.js";
 import { renderWithHyperframes } from "./src/render/hyperframes-runner.js";
@@ -17,15 +18,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TPL_DIR = join(__dirname, "src", "render", "templates");
 const SFX_DIR = join(__dirname, "assets", "sfx");
 const SCENE_GAP_SEC = 0.3;
-
-const DEFAULT_SFX: Record<string, { name: string; volume: number; offsetSec: number } | null> = {
-  hook:           { name: "transition/whoosh-soft", volume: 0.45, offsetSec: 0.0 },
-  comparison:     { name: "transition/swoosh",     volume: 0.35, offsetSec: 0.1 },
-  "stat-hero":    { name: "emphasis/ding",         volume: 0.30, offsetSec: 0.2 },
-  "feature-list": { name: "transition/pop",        volume: 0.30, offsetSec: 0.1 },
-  callout:        { name: "alert/notification",    volume: 0.30, offsetSec: 0.1 },
-  outro:          { name: "outro/tada",            volume: 0.30, offsetSec: 0.5 },
-};
 
 const HYPERFRAMES_CONFIG = {
   $schema: "https://hyperframes.heygen.com/schema/hyperframes.json",
@@ -72,22 +64,32 @@ async function main() {
     sceneStarts[a.id] = cursor;
     cursor += a.durationSec + SCENE_GAP_SEC;
   }
+  // Smart SFX selection — same 3-tier logic as pipeline
+  const sfxIndex = indexSfxLibrary(SFX_DIR);
   const sfxList: SfxMixSpec[] = [];
   for (const scene of script.scenes) {
     const startSec = sceneStarts[scene.id];
-    const tmpl = scene.templateData.template;
-    let sfxName: string, volume: number, offsetSec: number;
     if (scene.sfx) {
       if (scene.sfx.name === "none") continue;
-      sfxName = scene.sfx.name; volume = scene.sfx.volume; offsetSec = scene.sfx.startOffsetSec;
-    } else {
-      const def = DEFAULT_SFX[tmpl];
-      if (!def) continue;
-      sfxName = def.name; volume = def.volume; offsetSec = def.offsetSec;
+      const sfxPath = join(SFX_DIR, `${scene.sfx.name}.mp3`);
+      if (existsSync(sfxPath)) {
+        sfxList.push({ path: sfxPath, startSec: startSec + scene.sfx.startOffsetSec, volume: scene.sfx.volume });
+        console.log(`  scene ${scene.id}: SFX override -> ${scene.sfx.name}`);
+      }
+      continue;
     }
-    const sfxPath = join(SFX_DIR, `${sfxName}.mp3`);
-    if (!existsSync(sfxPath)) { console.log(`  WARN SFX not found: ${sfxName}`); continue; }
-    sfxList.push({ path: sfxPath, startSec: startSec + offsetSec, volume });
+    const picked = pickSfxForScene({
+      voiceText: scene.voiceText,
+      templateName: scene.templateData.template,
+      sceneId: scene.id,
+      index: sfxIndex,
+    });
+    if (!picked) continue;
+    const sfxPath = join(SFX_DIR, picked.relPath);
+    const playback = defaultPlayback(picked);
+    sfxList.push({ path: sfxPath, startSec: startSec + playback.offsetSec, volume: playback.volume });
+    const why = picked.source === "semantic" ? `semantic "${picked.matchedKeyword}"` : picked.source;
+    console.log(`  scene ${scene.id}: SFX -> ${picked.relPath} (${why})`);
   }
   console.log(`mixing ${sfxList.length} SFX into voice.mp3`);
   await mixSfxOntoVoice(voiceRawMp3, sfxList, voiceMp3);

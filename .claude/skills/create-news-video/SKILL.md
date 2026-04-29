@@ -208,6 +208,46 @@ Note: when source has no image, every scene uses `background.type = "gradient"` 
 
 ## Sound Effects (SFX)
 
+**You almost never need to set the `sfx` field.** The pipeline has a smart 3-tier selector that picks the right SFX for each scene automatically:
+
+1. **If `scene.sfx` is set** → use exactly that (override).
+2. **Else, scan `voiceText` for semantic keywords**:
+   - `cảnh báo / rủi ro / nguy hiểm / warning` → `alert/`
+   - `kỷ lục / vượt / xuất sắc / breakthrough / success` → `success/`
+   - `thất bại / sai / lỗi / fail / wrong` → `fail/`
+   - `ra mắt / công bố / lần đầu / launch / unveil` → `reveal/`
+   - `đếm ngược / tích tắc / countdown` → `countdown/`
+   - `hùng vĩ / hoành tráng / cinematic / epic` → `cinematic/`
+   - `hồi hộp / chờ đợi / drumroll / suspense` → `drumroll/`
+3. **Else, fall back to template default category**:
+   - `hook` → `transition/` or `cinematic/`
+   - `comparison` → `transition/` or `emphasis/`
+   - `stat-hero` → `emphasis/` or `success/`
+   - `feature-list` → `transition/` or `emphasis/`
+   - `callout` → `alert/` or `drumroll/`
+   - `outro` → `outro/` or `success/`
+
+Within a category, the actual file is picked **deterministically** by hashing the scene id — same script gives same SFX (idempotent), but different scenes in the same video get different files (variety).
+
+**This means:** in 95% of cases you should OMIT the `sfx` field entirely. Just write good Vietnamese voiceText with natural keywords (warning, breakthrough, launch, etc.) and the pipeline will pick the right sound.
+
+### When to add explicit `sfx` override
+
+Only when you want to FORCE a specific sound that the keyword matcher won't infer:
+- Scene needs a particular signature sound (e.g., always a gong on important scenes)
+- Disable SFX for a particular scene: `"sfx": { "name": "none" }`
+- Use a specific file: `"sfx": { "name": "transition/whoosh-sfx", "volume": 0.4 }`
+
+Example (rarely needed):
+```json
+{
+  "id": "body-3",
+  "voiceText": "...",
+  "templateData": { ... },
+  "sfx": { "name": "drumroll/snare-roll", "volume": 0.5, "startOffsetSec": 0.2 }
+}
+```
+
 The pipeline auto-mixes a sound effect at each scene start based on the template type:
 
 | Template | Default SFX | Sound character |
