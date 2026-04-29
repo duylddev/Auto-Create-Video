@@ -206,6 +206,47 @@ Generated `script.json` (excerpt):
 ```
 Note: when source has no image, every scene uses `background.type = "gradient"` (no image fallback at composer level needed).
 
+## Sound Effects (SFX)
+
+The pipeline auto-mixes a sound effect at each scene start based on the template type:
+
+| Template | Default SFX | Sound character |
+|---|---|---|
+| `hook` | `transition/whoosh-soft` | Dramatic entrance |
+| `comparison` | `transition/swoosh` | Side-by-side reveal |
+| `stat-hero` | `emphasis/ding` | Number reveal |
+| `feature-list` | `transition/pop` | Bullet appearance |
+| `callout` | `alert/notification` | Important info |
+| `outro` | `outro/tada` | Ending signature |
+
+**You usually do NOT need to add a `sfx` field** — defaults work for 95% of cases.
+
+**ONLY add an explicit `sfx` override when content STRONGLY suggests a different mood:**
+
+| Content cue (in voiceText) | Override |
+|---|---|
+| "cảnh báo", "rủi ro", "đáng lo", "nguy hiểm" | `{ "name": "alert/notification", "volume": 0.4 }` |
+| "vượt", "kỷ lục", "xuất sắc", "tăng mạnh" (positive stat) | `{ "name": "emphasis/chime", "volume": 0.35 }` |
+| Want to disable SFX for this scene | `{ "name": "none" }` |
+
+Place `sfx` at the same level as `voiceText` and `templateData`:
+
+```json
+{
+  "id": "body-3",
+  "type": "body",
+  "voiceText": "Cảnh báo: AI tự chủ có thể đặt ra rủi ro về an ninh mạng.",
+  "templateData": { "template": "callout", ... },
+  "sfx": { "name": "alert/notification", "volume": 0.4 }
+}
+```
+
+Available SFX names (must exist in `assets/sfx/<name>.mp3`):
+- `transition/whoosh-soft`, `transition/swoosh`, `transition/pop`
+- `emphasis/ding`, `emphasis/tick`, `emphasis/chime`
+- `alert/notification`
+- `outro/tada`
+
 ## Edge cases
 
 | Situation | Action |

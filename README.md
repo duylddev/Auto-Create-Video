@@ -217,6 +217,39 @@ Card xuất hiện ở giây thứ ~1.6 trong scene outro với chuỗi animatio
 3. Button "Follow" press-in + chuyển sang "Following ✓" với màu chuyển từ đỏ → xám đen
 4. Card stay visible đến hết video
 
+### 🔊 Sound Effects (SFX) — tự động mix theo template
+
+Mỗi video tự có sound effect mix layer vào voice (volume thấp, không lấn voice). **Không phải random** — pipeline pick theo loại template:
+
+| Template | Default SFX | Khi nào nghe |
+|---|---|---|
+| `hook` | `transition/whoosh-soft` | Đầu video, entrance dramatic |
+| `comparison` | `transition/swoosh` | Khi 2 cards xuất hiện |
+| `stat-hero` | `emphasis/ding` | Lúc số/% xuất hiện |
+| `feature-list` | `transition/pop` | Mỗi bullet appear |
+| `callout` | `alert/notification` | Statement quan trọng |
+| `outro` | `outro/tada` | Ending signature |
+
+**Library sounds đã sẵn trong `assets/sfx/`** (download từ [myinstants.com](https://www.myinstants.com/en/index/us/), royalty-free use):
+
+```
+assets/sfx/
+├── transition/  (whoosh-soft, swoosh, pop)
+├── emphasis/    (ding, tick, chime)
+├── alert/       (notification)
+└── outro/       (tada)
+```
+
+**Tự thêm SFX của bạn:**
+1. Download mp3 từ [myinstants.com](https://www.myinstants.com) hoặc [pixabay sound effects](https://pixabay.com/sound-effects/)
+2. Đặt vào folder phù hợp `assets/sfx/<category>/<name>.mp3`
+3. Reference trong script.json: `"sfx": { "name": "transition/your-sound", "volume": 0.4 }`
+
+**Smart override theo nội dung** (Claude tự pick khi sinh script):
+- "cảnh báo", "rủi ro" → `alert/notification`
+- "vượt", "kỷ lục", "xuất sắc" → `emphasis/chime`
+- Disable cho scene đó → `"sfx": { "name": "none" }`
+
 ### 🎬 Sử dụng
 
 #### Cách 1: Trong Claude Code (khuyến nghị)
@@ -535,6 +568,39 @@ Card appears at ~1.6s into the outro scene with this animation sequence:
 2. Hold ~0.9s for viewer to read
 3. "Follow" button press-in + transitions to "Following ✓" with red→dark-gray color shift
 4. Card stays visible until end of video
+
+### 🔊 Sound Effects (SFX) — auto-mixed by template
+
+Every video automatically gets a sound effect layer mixed into the voice (low volume, doesn't overpower speech). **Not random** — the pipeline picks based on template type:
+
+| Template | Default SFX | When you hear it |
+|---|---|---|
+| `hook` | `transition/whoosh-soft` | Start of video, dramatic entrance |
+| `comparison` | `transition/swoosh` | When 2 cards appear |
+| `stat-hero` | `emphasis/ding` | When number/% reveals |
+| `feature-list` | `transition/pop` | Each bullet appears |
+| `callout` | `alert/notification` | Important statement |
+| `outro` | `outro/tada` | Ending signature |
+
+**Bundled sounds in `assets/sfx/`** (downloaded from [myinstants.com](https://www.myinstants.com/en/index/us/)):
+
+```
+assets/sfx/
+├── transition/  (whoosh-soft, swoosh, pop)
+├── emphasis/    (ding, tick, chime)
+├── alert/       (notification)
+└── outro/       (tada)
+```
+
+**Add your own SFX:**
+1. Download mp3 from [myinstants.com](https://www.myinstants.com) or [pixabay sound effects](https://pixabay.com/sound-effects/)
+2. Drop into `assets/sfx/<category>/<name>.mp3`
+3. Reference in script.json: `"sfx": { "name": "transition/your-sound", "volume": 0.4 }`
+
+**Smart override by content** (Claude auto-picks when generating script):
+- "warning", "risk" → `alert/notification`
+- "exceed", "record", "outstanding" → `emphasis/chime`
+- Disable for this scene → `"sfx": { "name": "none" }`
 
 ### 🎬 Usage
 

@@ -6,7 +6,8 @@ import { ScriptSchema, type Script } from "./render/script-schema.js";
 import { loadConfig } from "./config.js";
 import { createTtsClient } from "./tts/tts-client.js";
 import { fetchImage } from "./assets/image-fetcher.js";
-import { getDurationSec, concatWithSilence } from "./assets/audio-tools.js";
+import { getDurationSec, concatWithSilence, mixSfxOntoVoice, type SfxMixSpec } from "./assets/audio-tools.js";
+import { existsSync } from "node:fs";
 import { composeHtml } from "./render/html-composer.js";
 import { renderWithHyperframes } from "./render/hyperframes-runner.js";
 import { log } from "./utils/logger.js";
@@ -25,6 +26,24 @@ const OUTRO_HOLD_SEC = 3;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TPL_DIR = join(__dirname, "render", "templates");
+/** Path to the SFX library (relative to project root) */
+const SFX_DIR = join(__dirname, "..", "assets", "sfx");
+
+/**
+ * Default SFX mapping per scene template.
+ * Each scene gets one SFX played at scene start (offset 0.1s for natural feel).
+ * Set to null to disable for that template.
+ *
+ * Files must exist in `assets/sfx/<name>.mp3`. Missing files are silently skipped.
+ */
+const DEFAULT_SFX: Record<string, { name: string; volume: number; offsetSec: number } | null> = {
+  hook:           { name: "transition/whoosh-soft", volume: 0.45, offsetSec: 0.0 },
+  comparison:     { name: "transition/swoosh",     volume: 0.35, offsetSec: 0.1 },
+  "stat-hero":    { name: "emphasis/ding",         volume: 0.30, offsetSec: 0.2 },
+  "feature-list": { name: "transition/pop",        volume: 0.30, offsetSec: 0.1 },
+  callout:        { name: "alert/notification",    volume: 0.30, offsetSec: 0.1 },
+  outro:          { name: "outro/tada",            volume: 0.30, offsetSec: 0.5 },
+};
 
 const HYPERFRAMES_CONFIG = {
   $schema: "https://hyperframes.heygen.com/schema/hyperframes.json",
@@ -93,9 +112,54 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   }
 
   // STEP 5
-  log.step(5, TOTAL_STEPS, "Concat voice scenes with 0.3s silence");
+  log.step(5, TOTAL_STEPS, "Concat voice scenes + mix SFX layer");
+  const voiceRawMp3 = join(outputDir, "voice-raw.mp3");
   const voiceMp3 = join(outputDir, "voice.mp3");
-  await concatWithSilence(sceneAudio.map((a) => a.path), SCENE_GAP_SEC, voiceMp3);
+  await concatWithSilence(sceneAudio.map((a) => a.path), SCENE_GAP_SEC, voiceRawMp3);
+
+  // Compute scene start times (cumulative voice durations + gaps)
+  let cursor = 0;
+  const sceneStarts: Record<string, number> = {};
+  for (const a of sceneAudio) {
+    sceneStarts[a.id] = cursor;
+    cursor += a.durationSec + SCENE_GAP_SEC;
+  }
+
+  // Build SFX mix list: per scene, pick override or template default
+  const sfxList: SfxMixSpec[] = [];
+  for (const scene of script.scenes) {
+    const startSec = sceneStarts[scene.id];
+    const tmpl = scene.templateData.template;
+
+    let sfxName: string | null;
+    let volume: number;
+    let offsetSec: number;
+
+    if (scene.sfx) {
+      // Explicit override
+      if (scene.sfx.name === "none") continue;
+      sfxName = scene.sfx.name;
+      volume = scene.sfx.volume;
+      offsetSec = scene.sfx.startOffsetSec;
+    } else {
+      // Template default
+      const def = DEFAULT_SFX[tmpl];
+      if (!def) continue;
+      sfxName = def.name;
+      volume = def.volume;
+      offsetSec = def.offsetSec;
+    }
+
+    const sfxPath = join(SFX_DIR, `${sfxName}.mp3`);
+    if (!existsSync(sfxPath)) {
+      log.warn(`SFX not found, skipping: ${sfxName}.mp3`);
+      continue;
+    }
+    sfxList.push({ path: sfxPath, startSec: startSec + offsetSec, volume });
+  }
+  log.info(`  mixing ${sfxList.length} SFX into voice.mp3`);
+  await mixSfxOntoVoice(voiceRawMp3, sfxList, voiceMp3);
+
   const totalAudioSec = await getDurationSec(voiceMp3);
   log.info(`  voice.mp3 total: ${totalAudioSec.toFixed(2)}s`);
   if (totalAudioSec < DURATION_MIN_SEC || totalAudioSec > DURATION_MAX_SEC) {

@@ -62,6 +62,25 @@ export const TemplateData = z.discriminatedUnion("template", [
 
 export type TemplateDataType = z.infer<typeof TemplateData>;
 
+// ── SFX schema ─────────────────────────────────────────────────────────────
+/**
+ * Per-scene sound effect override. If omitted, the pipeline picks a default
+ * SFX based on the template type (see SKILL.md / pipeline DEFAULT_SFX).
+ *
+ * `name` examples: "transition/whoosh-soft", "emphasis/ding", "alert/notification"
+ *   → resolves to assets/sfx/<name>.mp3
+ * Set `name: "none"` to explicitly disable SFX for this scene.
+ */
+const SfxSpec = z.object({
+  name: z.string().min(1),
+  /** Volume 0–1, default 0.4 (so SFX doesn't drown the voice) */
+  volume: z.number().min(0).max(1).default(0.4),
+  /** Seconds offset from scene start (default 0). Negative = before scene. */
+  startOffsetSec: z.number().default(0),
+});
+
+export type SfxSpecType = z.infer<typeof SfxSpec>;
+
 // ── Scene schema ───────────────────────────────────────────────────────────
 
 const Scene = z.object({
@@ -69,6 +88,8 @@ const Scene = z.object({
   type: z.enum(["hook", "body", "outro"]),
   voiceText: z.string().min(1),
   templateData: TemplateData,
+  /** Optional sound effect override (else pipeline picks per template) */
+  sfx: SfxSpec.optional(),
 });
 
 // ── Root schema ────────────────────────────────────────────────────────────

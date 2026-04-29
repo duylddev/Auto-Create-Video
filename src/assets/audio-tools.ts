@@ -121,3 +121,83 @@ export async function concatWithSilence(
     await rm(tmp, { recursive: true, force: true });
   }
 }
+
+export interface SfxMixSpec {
+  /** Absolute path to SFX mp3/wav file */
+  path: string;
+  /** Time in seconds (within voice.mp3) when SFX starts */
+  startSec: number;
+  /** Volume 0–1 */
+  volume: number;
+}
+
+/**
+ * Mix SFX layer onto an existing voice mp3.
+ *
+ * - Voice stays at full volume
+ * - Each SFX is delayed to its `startSec` and scaled by its `volume`
+ * - All SFX layers are summed, then mixed with voice (amix duration=first)
+ * - Output is mp3 at 192kbps
+ *
+ * If `sfxList` is empty, just copies voicePath → outPath.
+ */
+export async function mixSfxOntoVoice(
+  voicePath: string,
+  sfxList: SfxMixSpec[],
+  outPath: string,
+): Promise<void> {
+  if (sfxList.length === 0) {
+    // No SFX — just normalize/copy voice
+    await run("ffmpeg", [
+      "-y", "-i", voicePath,
+      "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "44100",
+      outPath,
+    ]);
+    return;
+  }
+
+  const ffArgs: string[] = ["-y", "-i", voicePath];
+  const filterParts: string[] = [];
+  const sfxLabels: string[] = [];
+
+  sfxList.forEach((s, i) => {
+    ffArgs.push("-i", s.path);
+    const inputIdx = i + 1; // voice is index 0
+    const outLabel = `s${i}`;
+    const delayMs = Math.max(0, Math.round(s.startSec * 1000));
+    // Per-SFX chain: resample to 44100 mono → adelay to start time → volume
+    filterParts.push(
+      `[${inputIdx}:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=mono,` +
+      `adelay=${delayMs}|${delayMs},volume=${s.volume}[${outLabel}]`
+    );
+    sfxLabels.push(`[${outLabel}]`);
+  });
+
+  // Mix all SFX layers together
+  let mixedSfxLabel: string;
+  if (sfxLabels.length === 1) {
+    mixedSfxLabel = sfxLabels[0];
+  } else {
+    filterParts.push(
+      `${sfxLabels.join("")}amix=inputs=${sfxLabels.length}:dropout_transition=0:normalize=0[sfxall]`
+    );
+    mixedSfxLabel = "[sfxall]";
+  }
+
+  // Voice path: resample, then mix with SFX layer (voice volume 1.0, SFX already scaled)
+  filterParts.push(
+    `[0:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=mono[voice]`
+  );
+  filterParts.push(
+    `[voice]${mixedSfxLabel}amix=inputs=2:duration=first:dropout_transition=0:normalize=0[out]`
+  );
+
+  ffArgs.push(
+    "-filter_complex", filterParts.join(";"),
+    "-map", "[out]",
+    "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "44100",
+    outPath,
+  );
+
+  await run("ffmpeg", ffArgs);
+}

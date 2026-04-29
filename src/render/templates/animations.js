@@ -43,7 +43,7 @@ window.__timelines["news-video"] = tl;
     } else if (layout === "callout") {
       animateCallout(scene, tl, start);
     } else if (layout === "outro") {
-      animateOutro(scene, tl, start);
+      animateOutro(scene, tl, start, dur);
     }
   });
 
@@ -134,7 +134,7 @@ window.__timelines["news-video"] = tl;
   }
 
   // ── OUTRO ─────────────────────────────────────────────────────────────
-  function animateOutro(scene, tl, start) {
+  function animateOutro(scene, tl, start, dur) {
     const cta = scene.querySelector(".out-cta-top");
     if (cta) {
       tl.fromTo(cta, { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.45 }, start + 0.2);
