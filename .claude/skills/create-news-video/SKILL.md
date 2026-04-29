@@ -241,11 +241,22 @@ Place `sfx` at the same level as `voiceText` and `templateData`:
 }
 ```
 
-Available SFX names (must exist in `assets/sfx/<name>.mp3`):
-- `transition/whoosh-soft`, `transition/swoosh`, `transition/pop`
-- `emphasis/ding`, `emphasis/tick`, `emphasis/chime`
-- `alert/notification`
-- `outro/tada`
+Available SFX categories (any `<name>` subfolder in `assets/sfx/<category>/<name>.mp3`):
+- `transition/` — whoosh, swoosh, swish, pop, punch, page-flip, slide, riser
+- `emphasis/` — ding, tick, chime, ping, bong, pop, punch
+- `alert/` — notification, alert, alarm, warning
+- `success/` — applepay, achievement, win, xbox, steam, jet-set
+- `fail/` — wrong-answer-buzzer, incorrect, error, dank-meme
+- `outro/` — tada, win31, noooo
+- `reveal/` — magic-fairy, anime-girl, hey-female-voice
+- `drumroll/` — snare, drum-roll, boom
+- `countdown/` — beep, timer
+- `cinematic/` — rise, impact
+
+Browse `assets/sfx/<category>/` to see exact filenames. Reference WITHOUT the `.mp3` extension. Example:
+```json
+{ "sfx": { "name": "success/xbox-360-achievement-sound", "volume": 0.4 } }
+```
 
 ## Edge cases
 

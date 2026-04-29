@@ -14,7 +14,8 @@
     "rerender": "tsx rerender.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "sfx:download": "tsx scripts/download-sfx.ts"
+    "sfx:download": "tsx scripts/download-sfx.ts",
+    "sfx:filter": "tsx scripts/filter-sfx.ts"
   },
   "keywords": [
     "video",
