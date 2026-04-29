@@ -32,19 +32,24 @@ export interface ComposeArgs {
   tiktok?: TiktokConfig;
   /** Relative path to avatar image inside the output dir (e.g. "tiktok-avatar.jpg"). */
   tiktokAvatarRelPath?: string;
+  /** Extra seconds added to outro scene visual duration after voice ends (TikTok card hold). Default 3. */
+  outroHoldSec?: number;
 }
 
 export function composeHtml(args: ComposeArgs): string {
   const { script, sceneAudio, gapSec, bgImageRelPath, audioRelPath } = args;
   const tiktok = args.tiktok ?? DEFAULT_TIKTOK;
   const tiktokAvatar = args.tiktokAvatarRelPath ?? "tiktok-avatar.jpg";
+  const outroHoldSec = args.outroHoldSec ?? 3;
 
-  // Compute timing per scene
+  // Compute timing per scene. Outro scene gets extra HOLD seconds so the
+  // TikTok follow card stays visible after the voice ends.
   let cursor = 0;
   const timing = script.scenes.map((scene) => {
     const audio = sceneAudio.find((a) => a.id === scene.id);
     if (!audio) throw new Error(`No audio entry for scene id=${scene.id}`);
-    const dur = audio.durationSec + gapSec;
+    const isOutro = scene.type === "outro";
+    const dur = audio.durationSec + gapSec + (isOutro ? outroHoldSec : 0);
     const start = cursor;
     cursor += dur;
     return { scene, start, duration: dur };

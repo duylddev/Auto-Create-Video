@@ -187,7 +187,12 @@ window.__timelines["news-video"] = tl;
         tl.to(ttFollwing, { opacity: 1, duration: 0.08 }, ttBase + 1.08);
       }
 
-      // Card stays visible until end of scene (no slide-out — feels more like a CTA)
+      // Hold + subtle zoom-in to focus viewer attention on the card.
+      // Slow zoom from scale 1 → 1.08 over the remaining outro duration.
+      const holdStart = ttBase + 1.3;             // after click animation
+      const holdEnd   = start + dur - 0.1;        // ends just before scene ends
+      const holdLen   = Math.max(0.5, holdEnd - holdStart);
+      tl.to(ttCard, { scale: 1.08, duration: holdLen }, holdStart);
     }
   }
 })();

@@ -15,6 +15,13 @@ const TOTAL_STEPS = 8;
 const DURATION_MIN_SEC = 48;
 const DURATION_MAX_SEC = 72;
 const SCENE_GAP_SEC = 0.3;
+/**
+ * Extra seconds added to the outro scene visual duration AFTER the voice ends.
+ * Gives the TikTok follow card time to be read by the viewer (otherwise the
+ * video ends a few hundred ms after the card slides up + click animation).
+ * Audio stays silent during this hold; visual stays on screen.
+ */
+const OUTRO_HOLD_SEC = 3;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TPL_DIR = join(__dirname, "render", "templates");
@@ -119,6 +126,7 @@ export async function runPipeline(scriptPath: string): Promise<void> {
     audioRelPath: "voice.mp3",
     tiktok: cfg.tiktok,
     tiktokAvatarRelPath: ttAvatarFile,
+    outroHoldSec: OUTRO_HOLD_SEC,
   });
 
   // hyperframes expects: index.html (NOT composition.html), hyperframes.json, meta.json in DIR
