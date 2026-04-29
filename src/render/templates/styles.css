@@ -1,11 +1,24 @@
+/* ============================================================
+   KINETIC TYPOGRAPHY — Vietnamese News Video 9:16 (1080×1920)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Anton&family=Bebas+Neue&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 1080px; height: 1920px; overflow: hidden; background: #000; font-family: 'Inter', 'Noto Sans', sans-serif; }
+
+html, body {
+  width: 1080px; height: 1920px; overflow: hidden; background: #000;
+  font-family: 'Inter', 'Noto Sans', sans-serif;
+}
+
 #stage { position: relative; width: 1080px; height: 1920px; }
 
-/* Default invisible — GSAP timeline (animations.js) sets opacity:1 at scene start, opacity:0 at end. */
+/* Default invisible — GSAP timeline sets opacity:1 at scene start, opacity:0 at end. */
 .scene { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; }
 
+/* ── BACKGROUND PRIMITIVES ─────────────────────────────────── */
 .bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+
+/* Ken Burns */
 .bg.kb-zoom-in    { animation: kb-zoom-in    var(--scene-dur) linear forwards; }
 .bg.kb-zoom-out   { animation: kb-zoom-out   var(--scene-dur) linear forwards; }
 .bg.kb-pan-left   { animation: kb-pan-left   var(--scene-dur) linear forwards; }
@@ -20,30 +33,280 @@ html, body { width: 1080px; height: 1920px; overflow: hidden; background: #000; 
 @keyframes kb-pan-up    { from { transform: scale(1.15) translateY(4%); } to { transform: scale(1.15) translateY(-4%); } }
 @keyframes kb-pan-down  { from { transform: scale(1.15) translateY(-4%); } to { transform: scale(1.15) translateY(4%); } }
 
+/* Legacy gradient backgrounds (kept for fallback) */
 .bg.gradient-outro-purple { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); }
 .bg.gradient-outro-blue   { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
 .bg.gradient-news-red     { background: linear-gradient(135deg, #c31432 0%, #240b36 100%); }
 .bg.gradient-news-dark    { background: linear-gradient(135deg, #232526 0%, #414345 100%); }
 
+/* ── LAYOUT: HOOK (og:image + dark overlay) ────────────────── */
+.layout-hook {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 80px;
+  text-align: center;
+}
+
+.layout-hook .badge {
+  position: absolute; top: 80px; left: 80px;
+  font-family: 'Inter', sans-serif;
+  font-size: 40px; font-weight: 700; color: #fff;
+  border: 3px solid rgba(255,255,255,0.7);
+  padding: 14px 32px; border-radius: 50px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  opacity: 0;
+}
+
+.layout-hook .hook-line0 {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 148px; font-weight: 900;
+  color: #fff; line-height: 1.0;
+  text-align: center; letter-spacing: -0.02em;
+  text-shadow: 0 4px 32px rgba(0,0,0,0.8);
+  opacity: 0;
+}
+
+.layout-hook .hook-line1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 96px; font-weight: 800;
+  color: #FFD93D; line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  margin-top: 24px;
+  opacity: 0;
+}
+
+/* ── LAYOUT 0: SWISS (warm cream/yellow) ───────────────────── */
+.layout-swiss {
+  position: absolute; inset: 0;
+  background: #FFD93D;
+  padding: 80px;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
+}
+
+.layout-swiss .sw-line0 {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 130px; font-weight: 900;
+  color: #000; line-height: 1.0;
+  letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.layout-swiss .sw-rule {
+  width: 100%; height: 4px; background: #000;
+  margin: 40px 0;
+  transform-origin: left center;
+  opacity: 0;
+}
+
+.layout-swiss .sw-line1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 64px; font-weight: 600;
+  color: #000; line-height: 1.3;
+  opacity: 0;
+}
+
+.layout-swiss .sw-deco {
+  position: absolute; bottom: 80px; right: 80px;
+  display: flex; gap: 24px; align-items: center;
+  opacity: 0;
+}
+
+.layout-swiss .sw-circle {
+  width: 60px; height: 60px;
+  background: #000; border-radius: 50%;
+}
+
+.layout-swiss .sw-square {
+  width: 60px; height: 60px;
+  border: 4px solid #000;
+}
+
+/* ── LAYOUT 1: DARK CARD ───────────────────────────────────── */
+.layout-dark-card {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.layout-dark-card .dc-card {
+  width: 80%; min-height: 70%;
+  background: #fff;
+  border-radius: 32px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 80px 60px;
+  opacity: 0;
+}
+
+.layout-dark-card .dc-line0 {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 110px; font-weight: 900;
+  color: #0f172a; line-height: 1.0;
+  text-align: center; letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.layout-dark-card .dc-accent-line {
+  width: 60%; height: 6px;
+  background: #06b6d4;
+  margin: 40px 0;
+  transform-origin: left center;
+  opacity: 0;
+}
+
+.layout-dark-card .dc-line1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 56px; font-weight: 500;
+  color: #334155; line-height: 1.3;
+  text-align: center;
+  opacity: 0;
+}
+
+/* ── LAYOUT 2: SPLIT CYAN ──────────────────────────────────── */
+.layout-split-cyan {
+  position: absolute; inset: 0;
+  overflow: hidden;
+}
+
+.layout-split-cyan .sc-top {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 50%;
+  background: #06b6d4;
+  display: flex; align-items: center;
+  padding: 0 80px;
+  opacity: 0;
+}
+
+.layout-split-cyan .sc-bottom {
+  position: absolute; bottom: 0; left: 0;
+  width: 100%; height: 50%;
+  background: #000;
+  display: flex; align-items: center;
+  padding: 0 80px;
+  opacity: 0;
+}
+
+.layout-split-cyan .sc-divider {
+  position: absolute; left: 50%; top: 0;
+  width: 8px; height: 100%;
+  background: #fff;
+  transform: translateX(-50%);
+  opacity: 0;
+}
+
+.layout-split-cyan .sc-line0 {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 120px; font-weight: 900;
+  color: #000; line-height: 1.0;
+  letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.layout-split-cyan .sc-line1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 64px; font-weight: 700;
+  color: #fff; line-height: 1.2;
+  opacity: 0;
+}
+
+/* ── LAYOUT 3: PURPLE HERO ─────────────────────────────────── */
+.layout-purple-hero {
+  position: absolute; inset: 0;
+  background: #7c3aed;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 80px;
+}
+
+.layout-purple-hero .ph-tag {
+  position: absolute; top: 80px; right: 80px;
+  font-family: 'Inter', sans-serif;
+  font-size: 40px; font-weight: 700; color: #fff;
+  border: 3px solid #fff;
+  padding: 14px 32px; border-radius: 12px;
+  letter-spacing: 0.04em;
+  opacity: 0;
+}
+
+.layout-purple-hero .ph-words {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  justify-content: center; align-items: center;
+  margin-bottom: 60px;
+}
+
+.layout-purple-hero .ph-word {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 160px; font-weight: 900;
+  color: #fff; line-height: 1.0;
+  text-transform: uppercase; letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.layout-purple-hero .ph-line1-box {
+  border: 4px solid #fff;
+  padding: 24px 48px; border-radius: 12px;
+  opacity: 0;
+}
+
+.layout-purple-hero .ph-line1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 56px; font-weight: 700;
+  color: #fff; text-align: center; line-height: 1.2;
+}
+
+/* ── LAYOUT: OUTRO ─────────────────────────────────────────── */
+.layout-outro {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 80px;
+  gap: 0;
+}
+
+.layout-outro .out-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: 56px; font-weight: 700; color: #fff;
+  border: 4px solid rgba(255,255,255,0.8);
+  padding: 20px 48px; border-radius: 50px;
+  letter-spacing: 0.06em; margin-bottom: 80px;
+  opacity: 0;
+}
+
+.layout-outro .out-channel {
+  font-family: 'Anton', 'Inter', sans-serif;
+  font-size: 140px; font-weight: 900;
+  color: #fff; text-align: center;
+  line-height: 1.0; letter-spacing: -0.02em;
+  opacity: 0;
+}
+
+.layout-outro .out-underline {
+  height: 4px; background: #fff;
+  width: 0; margin: 40px auto;
+  opacity: 0;
+}
+
+.layout-outro .out-source {
+  font-family: 'Inter', sans-serif;
+  font-size: 48px; font-weight: 500;
+  color: rgba(255,255,255,0.75); text-align: center;
+  margin-top: 40px;
+  opacity: 0;
+}
+
+/* ── FX OVERLAYS ───────────────────────────────────────────── */
+.fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.fx.flash-white-3f      { background: #fff; }
+.fx.particle-burst      { background: radial-gradient(circle at center, rgba(255,217,61,0.9) 0%, transparent 60%); }
+.fx.color-flash-accent  { background: rgba(255,217,61,0.5); }
+
+/* ── OVERLAY (dark veil over hook image) ───────────────────── */
 .overlay { position: absolute; inset: 0; background: #000; }
 
-.text-block { position: absolute; left: 80px; right: 80px; display: flex; flex-direction: column; gap: 24px; }
-.text-block.pos-center { top: 50%; transform: translateY(-50%); align-items: center; text-align: center; }
-.text-block.pos-top    { top: 200px; align-items: center; text-align: center; }
-.text-block.pos-bottom { bottom: 200px; align-items: center; text-align: center; }
-
-.line { display: inline-block; padding: 12px 28px; border-radius: 18px; line-height: 1.1; opacity: 0; }
-.line.style-hook-large    { font-size: 132px; font-weight: 900; }
-.line.style-body-medium   { font-size: 88px;  font-weight: 800; }
-.line.style-body-small    { font-size: 64px;  font-weight: 700; }
-.line.style-outro-card    { font-size: 72px;  font-weight: 700; }
-
-.line.emp-primary { color: #fff; background: rgba(0,0,0,0.55); }
-.line.emp-accent  { color: #FFD93D; background: rgba(0,0,0,0.6); }
-.line.emp-channel { color: #6EE7F9; background: rgba(0,0,0,0.5); }
-.line.emp-muted   { color: #cbd5e0; background: rgba(0,0,0,0.4); font-weight: 500; }
-
-.fx { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
-.fx.flash-white-3f { background: #fff; }
-.fx.particle-burst { background: radial-gradient(circle at center, rgba(255,217,61,0.9) 0%, transparent 60%); }
-.fx.color-flash-accent { background: rgba(255,217,61,0.5); }
+/* ── WORD STAGGER SPANS ────────────────────────────────────── */
+.word-span { display: inline-block; opacity: 0; }
