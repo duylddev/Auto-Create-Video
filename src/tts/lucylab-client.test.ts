@@ -11,7 +11,6 @@ const cfg = {
   endpoint: "https://api.lucylab.io/json-rpc",
   pollIntervalMs: 50,
   pollTimeoutMs: 5000,
-  ttsConcurrency: 3,
 };
 
 let tmpDir: string;

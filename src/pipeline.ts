@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import pLimit from "p-limit";
 import { ScriptSchema, type Script } from "./render/script-schema.js";
 import { loadConfig } from "./config.js";
-import { LucylabClient } from "./tts/lucylab-client.js";
+import { createTtsClient } from "./tts/tts-client.js";
 import { fetchImage } from "./assets/image-fetcher.js";
 import { getDurationSec, concatWithSilence } from "./assets/audio-tools.js";
 import { composeHtml } from "./render/html-composer.js";
@@ -35,11 +35,11 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   log.info(`Output directory: ${outputDir}`);
 
   // STEP 1
-  log.step(1, TOTAL_STEPS, "Load env + validate script.json");
+  log.step(1, TOTAL_STEPS, `Load env + validate script.json (TTS provider: ${cfg.ttsProvider})`);
   const raw = JSON.parse(await readFile(scriptPath, "utf8"));
-  // Substitute env placeholder before validation
-  if (raw.voice?.voiceId === "${VIETNAMESE_VOICEID}") {
-    raw.voice.voiceId = cfg.voiceId;
+  // Substitute env placeholder before validation (works for both providers)
+  if (raw.voice?.voiceId === "${VIETNAMESE_VOICEID}" || raw.voice?.voiceId === "${VOICE_ID}") {
+    raw.voice.voiceId = cfg.ttsProvider === "lucylab" ? cfg.lucylabVoiceId! : cfg.elevenlabsVoiceId!;
   }
   const script: Script = ScriptSchema.parse(raw);
 
@@ -54,9 +54,10 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   const imgPromise = fetchImage(script.metadata.source.image, imgPath);
 
   // STEP 4
-  const ttsClient = new LucylabClient(cfg);
-  // LucyLab limits to 1 concurrent export per API key (verified empirically)
-  const limit = pLimit(1);
+  const ttsClient = createTtsClient(cfg);
+  // Concurrency: LucyLab requires 1 (only 1 concurrent export per key);
+  // ElevenLabs supports parallel calls but we keep 1 by default to be polite.
+  const limit = pLimit(cfg.ttsConcurrency);
   const voiceDir = join(outputDir, "voice");
   await mkdir(voiceDir, { recursive: true });
 

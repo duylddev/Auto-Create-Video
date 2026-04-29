@@ -1,23 +1,24 @@
 import "dotenv/config";
 
-export interface Config {
-  apiKey: string;
-  voiceId: string;
-  endpoint: string;
-  pollIntervalMs: number;
-  pollTimeoutMs: number;
-  ttsConcurrency: number;
-}
+export type TtsProvider = "lucylab" | "elevenlabs";
 
-function required(name: string): string {
-  const v = process.env[name];
-  if (!v || v.trim() === "") {
-    throw new Error(
-      `Missing required env var ${name}. ` +
-      `Copy .env.example to .env.local and fill in the values.`
-    );
-  }
-  return v;
+export interface Config {
+  ttsProvider: TtsProvider;
+
+  // LucyLab
+  lucylabApiKey?: string;
+  lucylabVoiceId?: string;
+  lucylabEndpoint: string;
+  lucylabPollIntervalMs: number;
+  lucylabPollTimeoutMs: number;
+
+  // ElevenLabs
+  elevenlabsApiKey?: string;
+  elevenlabsVoiceId?: string;
+  elevenlabsModelId: string;
+  elevenlabsEndpoint: string;
+
+  ttsConcurrency: number;
 }
 
 function intDefault(name: string, def: number): number {
@@ -29,12 +30,51 @@ function intDefault(name: string, def: number): number {
 }
 
 export function loadConfig(): Config {
+  const provider = (process.env.TTS_PROVIDER ?? "lucylab") as TtsProvider;
+  if (provider !== "lucylab" && provider !== "elevenlabs") {
+    throw new Error(`TTS_PROVIDER must be "lucylab" or "elevenlabs", got "${provider}"`);
+  }
+
+  // Validate provider-specific required vars
+  if (provider === "lucylab") {
+    if (!process.env.VIETNAMESE_API_KEY || process.env.VIETNAMESE_API_KEY.trim() === "") {
+      throw new Error(
+        `Missing VIETNAMESE_API_KEY (required when TTS_PROVIDER=lucylab). ` +
+        `Copy .env.example to .env.local and fill in your LucyLab API key.`
+      );
+    }
+    if (!process.env.VIETNAMESE_VOICEID || process.env.VIETNAMESE_VOICEID.trim() === "") {
+      throw new Error(
+        `Missing VIETNAMESE_VOICEID (required when TTS_PROVIDER=lucylab). ` +
+        `Copy .env.example to .env.local and fill in your LucyLab voice ID.`
+      );
+    }
+  } else {
+    if (!process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_API_KEY.trim() === "") {
+      throw new Error(
+        `Missing ELEVENLABS_API_KEY (required when TTS_PROVIDER=elevenlabs). ` +
+        `Copy .env.example to .env.local and fill in your ElevenLabs API key.`
+      );
+    }
+    if (!process.env.ELEVENLABS_VOICE_ID || process.env.ELEVENLABS_VOICE_ID.trim() === "") {
+      throw new Error(
+        `Missing ELEVENLABS_VOICE_ID (required when TTS_PROVIDER=elevenlabs). ` +
+        `Copy .env.example to .env.local and fill in your ElevenLabs voice ID.`
+      );
+    }
+  }
+
   return {
-    apiKey: required("VIETNAMESE_API_KEY"),
-    voiceId: required("VIETNAMESE_VOICEID"),
-    endpoint: process.env.LUCYLAB_ENDPOINT ?? "https://api.lucylab.io/json-rpc",
-    pollIntervalMs: intDefault("LUCYLAB_POLL_INTERVAL_MS", 2000),
-    pollTimeoutMs: intDefault("LUCYLAB_POLL_TIMEOUT_MS", 120000),
-    ttsConcurrency: intDefault("TTS_CONCURRENCY", 3),
+    ttsProvider: provider,
+    lucylabApiKey: process.env.VIETNAMESE_API_KEY,
+    lucylabVoiceId: process.env.VIETNAMESE_VOICEID,
+    lucylabEndpoint: process.env.LUCYLAB_ENDPOINT ?? "https://api.lucylab.io/json-rpc",
+    lucylabPollIntervalMs: intDefault("LUCYLAB_POLL_INTERVAL_MS", 2000),
+    lucylabPollTimeoutMs: intDefault("LUCYLAB_POLL_TIMEOUT_MS", 120000),
+    elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
+    elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+    elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
+    elevenlabsEndpoint: process.env.ELEVENLABS_ENDPOINT ?? "https://api.elevenlabs.io/v1",
+    ttsConcurrency: intDefault("TTS_CONCURRENCY", 1),
   };
 }

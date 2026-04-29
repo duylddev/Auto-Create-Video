@@ -31,42 +31,50 @@ describe("composeHtml", () => {
     expect(html).toContain('class="scene clip"');       // clip class required for hyperframes visibility
     expect(html).toContain('window.__timelines');       // timeline registry (inlined JS)
 
-    // ── Image background (hook scene uses og:image) ──────────
+    // ── Persistent brand shell ────────────────────────────────
+    expect(html).toContain('class="brand-shell-header"');
+    expect(html).toContain('class="brand-shell-handle"');
+    expect(html).toContain('class="brand-shell-keyword"');
+    expect(html).toContain('id="grain-overlay"');
+    // Shell has no data-start (persistent)
+    expect(html).toContain('class="brand-name"');
+    expect(html).toContain("Công nghệ 24h");
+
+    // ── Hook scene ─────────────────────────────────────────────
+    expect(html).toContain('data-layout="hook"');
+    expect(html).toContain('class="hook-headline shimmer-sweep-target"');
+    expect(html).toContain("iPhone 17");                // headline content
+    expect(html).toContain("Camera 200MP!");            // subhead content
+
+    // Image background (hook has bgSrc + bgImageRelPath provided)
     expect(html).toContain('class="bg kb-zoom-in"');
     expect(html).toContain("background-image: url('images/bg.jpg')");
 
-    // ── Kinetic typography layouts ───────────────────────────
-    // Hook scene: layout-hook with massive title lines
-    expect(html).toContain('data-layout="hook"');
-    expect(html).toContain('class="hook-line0"');
-    expect(html).toContain("iPhone 17");                // hook line0 content
-    expect(html).toContain('class="hook-line1"');
-    expect(html).toContain("Camera 200MP!");            // hook line1 content
-    expect(html).toContain('class="badge"');
+    // ── Body templates ─────────────────────────────────────────
+    // body-1: stat-hero
+    expect(html).toContain('data-layout="stat-hero"');
+    expect(html).toContain('class="stat-value shimmer-sweep-target"');
+    expect(html).toContain('class="stat-label"');
+    expect(html).toContain("200MP");
 
-    // Body scenes: 4 layouts cycling
-    expect(html).toContain('data-layout="swiss"');      // layout 0: body-1
-    expect(html).toContain('class="sw-line0"');
-    expect(html).toContain('class="sw-rule"');
-    expect(html).toContain('class="sw-line1"');
+    // body-2: feature-list
+    expect(html).toContain('data-layout="feature-list"');
+    expect(html).toContain('class="feat-card"');
+    expect(html).toContain('class="feat-title"');
+    expect(html).toContain("Nâng cấp lớn");
 
-    expect(html).toContain('data-layout="dark-card"');  // layout 1: body-2
-    expect(html).toContain('class="dc-card"');
-    expect(html).toContain('class="dc-line0"');
-    expect(html).toContain('class="dc-accent-line"');
+    // body-3: callout
+    expect(html).toContain('data-layout="callout"');
+    expect(html).toContain('class="callout-card"');
+    expect(html).toContain('class="callout-statement"');
 
-    // Fixture has 3 body scenes → layouts: swiss (0), dark-card (1), split-cyan (2)
-    expect(html).toContain('data-layout="split-cyan"');   // layout 2: body-3
-
-    // Outro scene: kinetic outro layout
+    // ── Outro scene ────────────────────────────────────────────
     expect(html).toContain('data-layout="outro"');
     expect(html).toContain('class="out-channel"');
     expect(html).toContain('class="out-underline"');
     expect(html).toContain('class="out-source"');
-    expect(html).toContain("Công nghệ 24h");            // channel name in outro
-
-    // Outro line content (from fixture scene[outro].lines[0])
-    expect(html).toContain("Xem bản tin mới mỗi ngày");
+    expect(html).toContain("Theo dõi ngay");            // ctaTop content
+    expect(html).toContain('class="out-cta-top"');
 
     // Audio src
     expect(html).toContain('src="voice.mp3"');
@@ -76,7 +84,7 @@ describe("composeHtml", () => {
     expect(html).toContain("fonts.googleapis.com");
   });
 
-  it("falls back to gradient when bgImageRelPath is null but type=image", () => {
+  it("falls back to gradient when bgImageRelPath is null", () => {
     const script = JSON.parse(readFileSync("tests/fixtures/sample-script-with-image.json", "utf8")) as Script;
     const sceneAudio = script.scenes.map((s) => ({ id: s.id, durationSec: 5 }));
     const html = composeHtml({
@@ -86,7 +94,8 @@ describe("composeHtml", () => {
       bgImageRelPath: null,
       audioRelPath: "voice.mp3",
     });
-    expect(html).toContain('class="bg gradient-news-dark"');  // fallback preset
+    // Hook scene with bgSrc but no bgImageRelPath → gradient fallback
+    expect(html).toContain('class="bg gradient-news-dark"');
     expect(html).not.toContain("background-image: url");
   });
 });

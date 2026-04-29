@@ -1,6 +1,14 @@
 import axios, { AxiosError } from "axios";
 import { writeFile } from "node:fs/promises";
-import type { Config } from "../config.js";
+import type { TtsClient } from "./tts-client.js";
+
+export interface LucylabOpts {
+  apiKey: string;
+  voiceId: string;
+  endpoint: string;
+  pollIntervalMs: number;
+  pollTimeoutMs: number;
+}
 
 interface JsonRpcOk<T> { jsonrpc: "2.0"; id: string; result: T; }
 interface JsonRpcErr { jsonrpc: "2.0"; id: string; error: { code: string; message: string }; }
@@ -22,8 +30,8 @@ interface ExportStatus {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export class LucylabClient {
-  constructor(private cfg: Config) {}
+export class LucylabClient implements TtsClient {
+  constructor(private cfg: LucylabOpts) {}
 
   async generate(text: string, audioOutPath: string, srtOutPath?: string): Promise<void> {
     const projectExportId = await this.submitWithRetry(text);

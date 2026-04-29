@@ -1,8 +1,8 @@
 {
-  "name": "auto_create_video",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "auto-news-video",
+  "version": "2.0.0",
+  "description": "Auto-generate Vietnamese 9:16 short news videos from URL/txt — Claude Code skill + HyperFrames + LucyLab/ElevenLabs TTS",
+  "main": "src/cli.ts",
   "directories": {
     "doc": "docs"
   },
@@ -11,11 +11,24 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "pipeline": "tsx src/cli.ts",
+    "rerender": "tsx rerender.ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc"
   },
-  "keywords": [],
+  "keywords": [
+    "video",
+    "tts",
+    "news",
+    "vietnamese",
+    "tiktok",
+    "shorts",
+    "hyperframes",
+    "claude-code",
+    "lucylab",
+    "elevenlabs"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^1.15.2",
     "dotenv": "^17.4.2",
