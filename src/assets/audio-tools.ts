@@ -64,7 +64,7 @@ export async function concatWithSilence(
     await run("ffmpeg", [
       "-y", "-f", "concat", "-safe", "0",
       "-i", listPath,
-      "-c", "copy",
+      "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "44100",
       outPath,
     ]);
   } finally {

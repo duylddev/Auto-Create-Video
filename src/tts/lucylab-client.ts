@@ -3,12 +3,20 @@ import { writeFile } from "node:fs/promises";
 import type { Config } from "../config.js";
 
 interface JsonRpcOk<T> { jsonrpc: "2.0"; id: string; result: T; }
-interface JsonRpcErr { jsonrpc: "2.0"; id: string; error: { code: number; message: string }; }
+interface JsonRpcErr { jsonrpc: "2.0"; id: string; error: { code: string; message: string }; }
 type JsonRpcResp<T> = JsonRpcOk<T> | JsonRpcErr;
 
+interface TtsLongTextResult {
+  projectExportId: string;
+  characterCount: number;
+  blockCount: number;
+}
+
 interface ExportStatus {
-  status: "pending" | "running" | "done" | "failed";
+  jobId: string;
+  state: "pending" | "completed" | "failed" | string;
   url?: string;
+  srtUrl?: string;
   error?: string;
 }
 
@@ -17,16 +25,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class LucylabClient {
   constructor(private cfg: Config) {}
 
-  async generate(text: string, outPath: string): Promise<void> {
-    const exportId = await this.submitWithRetry(text);
-    const url = await this.pollUntilDone(exportId);
-    await this.download(url, outPath);
+  async generate(text: string, audioOutPath: string, srtOutPath?: string): Promise<void> {
+    const projectExportId = await this.submitWithRetry(text);
+    const { url, srtUrl } = await this.pollUntilDone(projectExportId);
+    await this.download(url, audioOutPath);
+    if (srtOutPath && srtUrl) {
+      await this.download(srtUrl, srtOutPath);
+    }
   }
 
-  private async rpc<T>(method: string, params: unknown, idHint: string): Promise<T> {
+  private async rpc<T>(method: string, input: unknown, idHint: string): Promise<T> {
     const resp = await axios.post<JsonRpcResp<T>>(
       this.cfg.endpoint,
-      { jsonrpc: "2.0", method, params, id: idHint },
+      { jsonrpc: "2.0", method, input, id: idHint },
       {
         headers: {
           Authorization: `Bearer ${this.cfg.apiKey}`,
@@ -47,12 +58,12 @@ export class LucylabClient {
     let lastErr: unknown;
     for (let attempt = 0; attempt < 4; attempt++) {
       try {
-        const result = await this.rpc<{ exportId: string }>(
+        const result = await this.rpc<TtsLongTextResult>(
           "ttsLongText",
-          { text, voiceId: this.cfg.voiceId, speed: 1.0 },
+          { text, userVoiceId: this.cfg.voiceId, speed: 1 },
           `submit-${Date.now()}`,
         );
-        return result.exportId;
+        return result.projectExportId;
       } catch (e) {
         lastErr = e;
         const status = (e as AxiosError).response?.status;
@@ -64,24 +75,24 @@ export class LucylabClient {
     throw lastErr;
   }
 
-  private async pollUntilDone(exportId: string): Promise<string> {
+  private async pollUntilDone(projectExportId: string): Promise<{ url: string; srtUrl?: string }> {
     const start = Date.now();
     while (Date.now() - start < this.cfg.pollTimeoutMs) {
       const status = await this.rpc<ExportStatus>(
         "getExportStatus",
-        { exportId },
+        { projectExportId },
         `poll-${Date.now()}`,
       );
-      if (status.status === "done") {
-        if (!status.url) throw new Error(`LucyLab returned status=done without url for ${exportId}`);
-        return status.url;
+      if (status.state === "completed") {
+        if (!status.url) throw new Error(`LucyLab returned state=completed without url for ${projectExportId}`);
+        return { url: status.url, srtUrl: status.srtUrl };
       }
-      if (status.status === "failed") {
-        throw new Error(`LucyLab export ${exportId} failed: ${status.error ?? "unknown"}`);
+      if (status.state === "failed") {
+        throw new Error(`LucyLab export ${projectExportId} failed: ${status.error ?? "unknown"}`);
       }
       await sleep(this.cfg.pollIntervalMs);
     }
-    throw new Error(`LucyLab export ${exportId} polling timeout after ${this.cfg.pollTimeoutMs}ms`);
+    throw new Error(`LucyLab export ${projectExportId} polling timeout after ${this.cfg.pollTimeoutMs}ms`);
   }
 
   private async download(url: string, outPath: string): Promise<void> {

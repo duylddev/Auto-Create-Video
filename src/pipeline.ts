@@ -55,15 +55,17 @@ export async function runPipeline(scriptPath: string): Promise<void> {
 
   // STEP 4
   const ttsClient = new LucylabClient(cfg);
-  const limit = pLimit(cfg.ttsConcurrency);
+  // LucyLab limits to 1 concurrent export per API key (verified empirically)
+  const limit = pLimit(1);
   const voiceDir = join(outputDir, "voice");
   await mkdir(voiceDir, { recursive: true });
 
   const sceneAudioPromises = script.scenes.map((scene) =>
     limit(async () => {
       const out = join(voiceDir, `scene-${scene.id}.mp3`);
+      const srtOut = join(voiceDir, `scene-${scene.id}.srt`);
       log.info(`  TTS scene ${scene.id} (${scene.voiceText.length} chars)...`);
-      await ttsClient.generate(scene.voiceText, out);
+      await ttsClient.generate(scene.voiceText, out, srtOut);
       const dur = await getDurationSec(out);
       log.info(`  scene ${scene.id}: ${dur.toFixed(2)}s`);
       return { id: scene.id, path: out, durationSec: dur };
