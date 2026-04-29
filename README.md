@@ -29,7 +29,7 @@ Pipeline tự động làm các bước:
 - ✅ **Tích hợp Claude Code skill** — chỉ cần `/create-news-video <url>` là xong
 - ✅ **Mở rộng được**: schema rõ ràng, code modular, có test suite
 
-### 🛠️ Công nghệ sử dụng
+### 🛠️ Công nghệ & thư viện sử dụng
 
 | Lớp | Công nghệ |
 |---|---|
@@ -43,6 +43,92 @@ Pipeline tự động làm các bước:
 | **AI/Skill** | [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) skill (`/create-news-video`) |
 | **Visual blocks** | HyperFrames registry: `grain-overlay`, `shimmer-sweep`, `tiktok-follow` |
 | **Fonts** | Inter + Anton (Google Fonts) |
+
+### 🔬 Giải thích chi tiết các công nghệ chính
+
+#### 🎞️ HyperFrames — trái tim của render engine
+[HyperFrames](https://hyperframes.heygen.com) là framework HTML-to-video do **HeyGen** phát triển và mã nguồn mở. Khác với cách dùng After Effects hay Premiere thủ công, HyperFrames cho phép bạn **viết video bằng HTML/CSS/JS** rồi render thành MP4 chất lượng cao một cách **deterministic** (cùng input → cùng output frame-by-frame).
+
+**Cách nó hoạt động trong dự án:**
+1. Pipeline sinh ra một file `index.html` chứa toàn bộ scenes + GSAP timeline
+2. HyperFrames spawn headless Chrome (Puppeteer) để load file đó
+3. Capture từng frame ở đúng timestamp (30fps × 60s = 1800 frames)
+4. Encode tất cả frames + audio thành MP4 dùng FFmpeg
+
+**Tại sao chọn HyperFrames?**
+- ✅ **Có sẵn 50+ pre-built blocks** trong registry (transitions, social cards, data viz, kinetic typography...) — dùng `npx hyperframes add <name>`
+- ✅ **GSAP timeline** đã được tích hợp sẵn cho animations mượt mà
+- ✅ **Skill-friendly cho AI agent** — Claude/GPT có thể tự sinh composition HTML
+- ✅ **Lint built-in** (`npx hyperframes lint`) phát hiện lỗi composition trước khi render
+- ✅ **Aspect ratio 9:16 native** — sinh ra cho short-form video
+
+**Các blocks/components dùng trong dự án:**
+- `grain-overlay` — film grain texture xuyên video (cảm giác "analog warmth")
+- `shimmer-sweep` — light pass animation cho text headline
+- `tiktok-follow` — outro CTA card (đã sẵn 1080×1920)
+
+#### 🎤 LucyLab vs ElevenLabs — chọn cái nào?
+
+| Tiêu chí | LucyLab | ElevenLabs |
+|---|---|---|
+| **Giọng tiếng Việt** | ⭐⭐⭐⭐⭐ Tự nhiên (voice cloning) | ⭐⭐⭐⭐ Tốt (multilingual) |
+| **Chi phí** | Rẻ (~25k VND / 1M ký tự) | Đắt hơn (~$5 / 30k ký tự) |
+| **Voice library** | Tự clone giọng | 1000+ voices có sẵn |
+| **API style** | JSON-RPC async (poll) | REST sync (instant) |
+| **SRT subtitle** | ✅ Free, kèm theo response | ❌ Không có |
+| **Concurrency** | 1 export/account | Parallel OK |
+| **Languages khác** | ❌ Chỉ tiếng Việt | ✅ 30+ ngôn ngữ |
+
+**Khuyến nghị:**
+- 🇻🇳 **Chỉ làm video tiếng Việt** → chọn **LucyLab** (rẻ + giọng tự nhiên + có SRT)
+- 🌍 **Làm đa ngôn ngữ hoặc cần voice library lớn** → chọn **ElevenLabs**
+- 🔄 **Không chắc** → bắt đầu với LucyLab, đổi sang ElevenLabs sau (chỉ cần đổi `TTS_PROVIDER` trong `.env.local`)
+
+#### 🛡️ Zod — schema validation an toàn
+
+[Zod](https://zod.dev) là TypeScript-first schema library. Trong project này, Zod đảm bảo `script.json` (do Claude sinh) **luôn đúng cấu trúc** trước khi pipeline chạy.
+
+```ts
+// Discriminated union: 6 loại template, mỗi loại có data shape khác nhau
+const TemplateData = z.discriminatedUnion("template", [
+  HookData, ComparisonData, StatHeroData, FeatureListData, CalloutData, OutroData
+]);
+```
+
+Lợi ích:
+- Phát hiện ngay nếu Claude sinh script sai (vd: `template: "stat"` không tồn tại) — fail Step 1 với error message rõ ràng
+- TypeScript types được suy ra tự động từ Zod schema → composer không cần khai báo type lại
+- Schema = source of truth cho cả validation runtime + type compile-time
+
+#### ⚙️ Claude Code Skill — interface với AI
+
+Project tích hợp với [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) qua **skill markdown** đặt tại `.claude/skills/create-news-video/SKILL.md`. Skill này hướng dẫn Claude:
+1. WebFetch URL bài báo
+2. Phân tích nội dung tiếng Việt
+3. Pick template phù hợp cho từng scene (comparison nếu có "vs", stat-hero nếu có số liệu...)
+4. Sinh `script.json` đúng schema
+5. Run pipeline qua Bash
+
+Ưu điểm: bạn chỉ cần gõ `/create-news-video <url>` — Claude tự làm hết phần "creative" (viết kịch bản tiếng Việt, chọn template, viết câu hook hấp dẫn). Phần "deterministic" (gọi API, render) do Node CLI lo.
+
+#### 🧪 Vitest — testing framework hiện đại
+
+[Vitest](https://vitest.dev) (ESM-native, replacement cho Jest) cho 35 unit tests:
+- **Schema validation tests** với fixtures (valid + invalid scripts)
+- **TTS client tests** với `nock` mock HTTP (không gọi API thật, không tốn quota)
+- **Audio tools tests** với fixture mp3 files (440Hz/2s, 880Hz/3s sine waves)
+- **HTML composer snapshot test** — đảm bảo output HTML không bị break khi refactor
+
+Chạy `npm test` để verify mọi thứ work trước khi push.
+
+#### 🎬 FFmpeg — backbone audio/video
+
+FFmpeg + ffprobe được dùng để:
+- **`ffprobe`**: đo duration của mp3 từng scene (để compute timing trong composition)
+- **`ffmpeg`**: concat các scene mp3 với 0.3s silence gap → `voice.mp3` cuối
+- **`ffmpeg`** (qua HyperFrames): encode 1800 frame PNG + audio thành MP4
+
+Phải có trong PATH (`ffmpeg -version`). Trên Windows: `winget install Gyan.FFmpeg`.
 
 ### 📋 Yêu cầu hệ thống
 
@@ -238,7 +324,7 @@ The pipeline automates the following steps:
 - ✅ **Claude Code skill integration** — just type `/create-news-video <url>` and you're done
 - ✅ **Extensible**: clean schema, modular code, full test suite
 
-### 🛠️ Tech Stack
+### 🛠️ Tech Stack & Libraries
 
 | Layer | Technology |
 |---|---|
@@ -252,6 +338,92 @@ The pipeline automates the following steps:
 | **AI/Skill** | [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) skill (`/create-news-video`) |
 | **Visual blocks** | HyperFrames registry: `grain-overlay`, `shimmer-sweep`, `tiktok-follow` |
 | **Fonts** | Inter + Anton (Google Fonts) |
+
+### 🔬 Deep-dive on key technologies
+
+#### 🎞️ HyperFrames — heart of the render engine
+[HyperFrames](https://hyperframes.heygen.com) is an open-source HTML-to-video framework by **HeyGen**. Unlike traditional editors (After Effects, Premiere), HyperFrames lets you **author videos with HTML/CSS/JS** then render to high-quality MP4 **deterministically** (same input → identical output frame-by-frame).
+
+**How it works in this project:**
+1. Pipeline generates an `index.html` containing all scenes + GSAP timeline
+2. HyperFrames spawns headless Chrome (Puppeteer) to load it
+3. Captures each frame at the precise timestamp (30fps × 60s = 1800 frames)
+4. Encodes all frames + audio into MP4 via FFmpeg
+
+**Why HyperFrames?**
+- ✅ **50+ pre-built blocks** in registry (transitions, social cards, data viz, kinetic typography...) — installable via `npx hyperframes add <name>`
+- ✅ **GSAP timeline** built-in for smooth animations
+- ✅ **AI-agent friendly** — Claude/GPT can author compositions in HTML
+- ✅ **Built-in lint** (`npx hyperframes lint`) catches composition errors before render
+- ✅ **9:16 native** — designed for short-form video
+
+**Blocks/components used in this project:**
+- `grain-overlay` — film grain texture throughout video (analog warmth feel)
+- `shimmer-sweep` — light pass animation for headline text
+- `tiktok-follow` — outro CTA card (already 1080×1920)
+
+#### 🎤 LucyLab vs ElevenLabs — which to choose?
+
+| Criteria | LucyLab | ElevenLabs |
+|---|---|---|
+| **Vietnamese voice** | ⭐⭐⭐⭐⭐ Natural (voice cloning) | ⭐⭐⭐⭐ Good (multilingual) |
+| **Cost** | Cheap (~$1 / 1M chars) | Pricier (~$5 / 30k chars) |
+| **Voice library** | Self-clone voices | 1000+ voices ready |
+| **API style** | JSON-RPC async (poll) | REST sync (instant) |
+| **SRT subtitle** | ✅ Free, included in response | ❌ Not provided |
+| **Concurrency** | 1 export/account | Parallel OK |
+| **Other languages** | ❌ Vietnamese only | ✅ 30+ languages |
+
+**Recommendation:**
+- 🇻🇳 **Vietnamese-only videos** → use **LucyLab** (cheap + natural + with SRT)
+- 🌍 **Multilingual or need large voice library** → use **ElevenLabs**
+- 🔄 **Not sure** → start with LucyLab, switch later (just change `TTS_PROVIDER` in `.env.local`)
+
+#### 🛡️ Zod — type-safe schema validation
+
+[Zod](https://zod.dev) is a TypeScript-first schema library. In this project, Zod ensures `script.json` (generated by Claude) **always has correct structure** before pipeline runs.
+
+```ts
+// Discriminated union: 6 template types, each with different data shape
+const TemplateData = z.discriminatedUnion("template", [
+  HookData, ComparisonData, StatHeroData, FeatureListData, CalloutData, OutroData
+]);
+```
+
+Benefits:
+- Detects immediately if Claude generates wrong script (e.g. `template: "stat"` doesn't exist) — fails Step 1 with clear error
+- TypeScript types are inferred from Zod schema → composer doesn't need to redeclare types
+- Schema = single source of truth for both runtime validation + compile-time types
+
+#### ⚙️ Claude Code Skill — AI interface
+
+The project integrates with [Claude Code](https://docs.claude.com/en/docs/claude-code/overview) via a **skill markdown** at `.claude/skills/create-news-video/SKILL.md`. This skill instructs Claude to:
+1. WebFetch the article URL
+2. Analyze Vietnamese content
+3. Pick the right template per scene (comparison if "vs", stat-hero if numbers...)
+4. Generate `script.json` matching schema
+5. Run pipeline via Bash
+
+Benefit: just type `/create-news-video <url>` — Claude handles all "creative" work (writing Vietnamese script, picking templates, crafting catchy hooks). The "deterministic" parts (API calls, rendering) are handled by Node CLI.
+
+#### 🧪 Vitest — modern testing framework
+
+[Vitest](https://vitest.dev) (ESM-native Jest replacement) provides 35 unit tests:
+- **Schema validation tests** with fixtures (valid + invalid scripts)
+- **TTS client tests** with `nock` HTTP mocking (no real API calls, no quota wasted)
+- **Audio tools tests** with fixture mp3 files (440Hz/2s, 880Hz/3s sine waves)
+- **HTML composer snapshot test** — ensures output HTML doesn't break on refactor
+
+Run `npm test` to verify everything works before pushing.
+
+#### 🎬 FFmpeg — audio/video backbone
+
+FFmpeg + ffprobe is used to:
+- **`ffprobe`**: measure mp3 duration per scene (to compute timing in composition)
+- **`ffmpeg`**: concat scene mp3s with 0.3s silence gap → final `voice.mp3`
+- **`ffmpeg`** (via HyperFrames): encode 1800 PNG frames + audio into MP4
+
+Must be in PATH (`ffmpeg -version`). On Windows: `winget install Gyan.FFmpeg`.
 
 ### 📋 Prerequisites
 
