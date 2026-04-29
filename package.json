@@ -13,7 +13,8 @@
     "pipeline": "tsx src/cli.ts",
     "rerender": "tsx rerender.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "sfx:download": "tsx scripts/download-sfx.ts"
   },
   "keywords": [
     "video",
