@@ -76,6 +76,16 @@ export async function runPipeline(scriptPath: string): Promise<void> {
     limit(async () => {
       const out = join(voiceDir, `scene-${scene.id}.mp3`);
       const srtOut = join(voiceDir, `scene-${scene.id}.srt`);
+
+      // IDEMPOTENT: skip TTS if voice file already exists.
+      // To force re-TTS for a scene, delete its mp3 file before running.
+      // This saves API quota when only some scenes' voiceText changed.
+      if (existsSync(out)) {
+        const dur = await getDurationSec(out);
+        log.info(`  scene ${scene.id}: REUSE existing mp3 (${dur.toFixed(2)}s) — delete to force re-TTS`);
+        return { id: scene.id, path: out, durationSec: dur };
+      }
+
       log.info(`  TTS scene ${scene.id} (${scene.voiceText.length} chars)...`);
       await ttsClient.generate(scene.voiceText, out, srtOut);
       const dur = await getDurationSec(out);
@@ -170,16 +180,27 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   log.step(6, TOTAL_STEPS, "Compose HTML + project files");
 
   // Resolve TikTok avatar — download URL if provided, else copy bundled default
-  const ttAvatarFile = "tiktok-avatar.jpg";
+  // Bundled avatar can be jpg/jpeg/png/webp — pick whichever exists
+  const findBundledAvatar = (): string => {
+    const baseDir = join(__dirname, "..", "assets");
+    for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+      const p = join(baseDir, `avatar.${ext}`);
+      if (existsSync(p)) return p;
+    }
+    throw new Error(`No bundled avatar found. Place an image at assets/avatar.{jpg,png,webp}`);
+  };
+  const bundledAvatar = findBundledAvatar();
+  const ttAvatarExt = bundledAvatar.split(".").pop()!.toLowerCase();
+  const ttAvatarFile = `tiktok-avatar.${ttAvatarExt}`;
   const ttAvatarOut = join(outputDir, ttAvatarFile);
   if (cfg.tiktok.avatarUrl) {
     const r = await fetchImage(cfg.tiktok.avatarUrl, ttAvatarOut);
     if (!r.success) {
       log.warn(`TikTok avatar download failed: ${r.reason} → falling back to bundled default`);
-      await copyFile(join(__dirname, "..", "assets", "avatar.jpg"), ttAvatarOut);
+      await copyFile(bundledAvatar, ttAvatarOut);
     }
   } else {
-    await copyFile(join(__dirname, "..", "assets", "avatar.jpg"), ttAvatarOut);
+    await copyFile(bundledAvatar, ttAvatarOut);
   }
 
   const html = composeHtml({

@@ -103,13 +103,20 @@ async function main() {
   const bgImageRelPath = fs.existsSync(bgImagePath) ? "images/bg.jpg" : null;
   console.log(`bgImage: ${bgImageRelPath ?? "(none — gradient fallback)"}`);
 
-  // TikTok avatar — copy bundled default if not already in output dir
-  const ttAvatarFile = "tiktok-avatar.jpg";
-  const ttAvatarOut = join(outputDir, ttAvatarFile);
-  const fs2 = await import("node:fs");
-  if (!fs2.existsSync(ttAvatarOut)) {
-    await copyFile(join(__dirname, "assets", "avatar.jpg"), ttAvatarOut);
+  // TikTok avatar — find bundled (jpg/jpeg/png/webp) and copy to output dir
+  let bundledAvatar: string | null = null;
+  for (const ext of ["jpg", "jpeg", "png", "webp"]) {
+    const p = join(__dirname, "assets", `avatar.${ext}`);
+    if (existsSync(p)) { bundledAvatar = p; break; }
   }
+  if (!bundledAvatar) {
+    throw new Error("No bundled avatar found. Place an image at assets/avatar.{jpg,png,webp}");
+  }
+  const ttAvatarExt = bundledAvatar.split(".").pop()!.toLowerCase();
+  const ttAvatarFile = `tiktok-avatar.${ttAvatarExt}`;
+  const ttAvatarOut = join(outputDir, ttAvatarFile);
+  // Always re-copy in case bundled was updated
+  await copyFile(bundledAvatar, ttAvatarOut);
 
   // Compose HTML
   const html = composeHtml({
