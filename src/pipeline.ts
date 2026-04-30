@@ -40,6 +40,18 @@ const HYPERFRAMES_CONFIG = {
   },
 };
 
+function resolveConfiguredVoiceId() {
+  const lucylabVoiceId = process.env.VIETNAMESE_VOICEID;
+  const elevenlabsVoiceId = process.env.ELEVENLABS_VOICE_ID;
+  const vieneuVoiceId = process.env.VIENEU_VOICE_ID;
+
+  return {
+    lucylab: lucylabVoiceId,
+    elevenlabs: elevenlabsVoiceId,
+    vieneu: vieneuVoiceId,
+  } as const;
+}
+
 export async function runPipeline(scriptPath: string): Promise<void> {
   const cfg = loadConfig();
   const outputDir = dirname(scriptPath);
@@ -48,10 +60,19 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   // STEP 1
   log.step(1, TOTAL_STEPS, `Load env + validate script.json (TTS provider: ${cfg.ttsProvider})`);
   const raw = JSON.parse(await readFile(scriptPath, "utf8"));
-  // Substitute env placeholder before validation (works for both providers)
-  if (raw.voice?.voiceId === "${VIETNAMESE_VOICEID}" || raw.voice?.voiceId === "${VOICE_ID}") {
-    raw.voice.voiceId = cfg.ttsProvider === "lucylab" ? cfg.lucylabVoiceId! : cfg.elevenlabsVoiceId!;
+  // Substitute env placeholder before validation so one script template can be
+  // reused across providers. The actual provider used at runtime always comes
+  // from `.env.local` via `loadConfig()`.
+  const configuredVoiceIds = resolveConfiguredVoiceId();
+  if (
+    raw.voice?.voiceId === "${VIETNAMESE_VOICEID}" ||
+    raw.voice?.voiceId === "${ELEVENLABS_VOICE_ID}" ||
+    raw.voice?.voiceId === "${VIENEU_VOICE_ID}" ||
+    raw.voice?.voiceId === "${VOICE_ID}"
+  ) {
+    raw.voice.voiceId = configuredVoiceIds[cfg.ttsProvider] ?? raw.voice.voiceId;
   }
+  raw.voice.provider = cfg.ttsProvider;
   const script: Script = ScriptSchema.parse(raw);
 
   // STEP 2

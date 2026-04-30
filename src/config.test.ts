@@ -12,6 +12,9 @@ const ENV_KEYS = [
   "ELEVENLABS_VOICE_ID",
   "ELEVENLABS_MODEL_ID",
   "ELEVENLABS_ENDPOINT",
+  "VIENEU_API_BASE",
+  "VIENEU_MODEL_ID",
+  "VIENEU_VOICE_ID",
   "TTS_CONCURRENCY",
 ];
 
@@ -82,6 +85,26 @@ describe("loadConfig", () => {
       process.env.ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
       const cfg = loadConfig();
       expect(cfg.elevenlabsModelId).toBe("eleven_turbo_v2_5");
+    });
+  });
+
+
+  describe("VieNeu provider", () => {
+    it("reads VieNeu env vars when TTS_PROVIDER=vieneu", () => {
+      process.env.TTS_PROVIDER = "vieneu";
+      process.env.VIENEU_API_BASE = "http://127.0.0.1:23333/v1";
+      process.env.VIENEU_MODEL_ID = "pnnbao-ump/VieNeu-TTS";
+      process.env.VIENEU_VOICE_ID = "bac-si-tuyen";
+      const cfg = loadConfig();
+      expect(cfg.ttsProvider).toBe("vieneu");
+      expect(cfg.vieneuApiBase).toBe("http://127.0.0.1:23333/v1");
+      expect(cfg.vieneuModelId).toBe("pnnbao-ump/VieNeu-TTS");
+      expect(cfg.vieneuVoiceId).toBe("bac-si-tuyen");
+    });
+
+    it("throws when VIENEU_API_BASE missing", () => {
+      process.env.TTS_PROVIDER = "vieneu";
+      expect(() => loadConfig()).toThrow(/VIENEU_API_BASE/);
     });
   });
 

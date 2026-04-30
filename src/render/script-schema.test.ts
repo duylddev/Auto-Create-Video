@@ -32,4 +32,18 @@ describe("ScriptSchema", () => {
     data.scenes = data.scenes.filter((s: any) => s.type !== "outro");
     expect(() => ScriptSchema.parse(data)).toThrow(/outro/);
   });
+
+  it("accepts elevenlabs as voice provider", () => {
+    const data = load("sample-script-with-image.json");
+    data.voice.provider = "elevenlabs";
+    data.voice.voiceId = "EXAVITQu4vr4xnSDxMaL";
+    expect(() => ScriptSchema.parse(data)).not.toThrow();
+  });
+
+  it("accepts vieneu as voice provider", () => {
+    const data = load("sample-script-no-image.json");
+    data.voice.provider = "vieneu";
+    data.voice.voiceId = "bac-si-tuyen";
+    expect(() => ScriptSchema.parse(data)).not.toThrow();
+  });
 });

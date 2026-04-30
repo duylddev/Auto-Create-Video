@@ -17,7 +17,7 @@
 Pipeline tự động làm các bước:
 1. **Đọc URL bài báo** (hoặc file `.txt`) và phân tích nội dung
 2. **Sinh kịch bản JSON** với 6 loại template visual khác nhau (hook, comparison, stat-hero, feature-list, callout, outro) — chọn theo nội dung bài viết
-3. **Tổng hợp giọng đọc** tiếng Việt qua **LucyLab** hoặc **ElevenLabs**
+3. **Tổng hợp giọng đọc** tiếng Việt qua **LucyLab**, **ElevenLabs** hoặc **VieNeu-TTS (remote mode)**
 4. **Render video MP4** với HyperFrames (Puppeteer + GSAP + FFmpeg) — phong cách **studio shell** + animation hiện đại
 5. **Xuất kèm script.txt và voice.mp3** để bạn import vào CapCut Pro thêm caption / nhạc nền
 
@@ -25,7 +25,7 @@ Pipeline tự động làm các bước:
 
 - ✅ **Phong cách HeyGen-quality**: persistent brand shell (icon, channel, handle), grain texture, gradient navy + cyan + purple
 - ✅ **6 loại scene template** tự pick theo nội dung — không rập khuôn
-- ✅ **Đa nhà cung cấp TTS**: LucyLab (giọng Việt tự nhiên + SRT free) hoặc ElevenLabs (đa ngôn ngữ, nhiều voice library)
+- ✅ **Đa nhà cung cấp TTS**: LucyLab (giọng Việt tự nhiên + SRT free), ElevenLabs (đa ngôn ngữ) hoặc VieNeu-TTS remote mode (tự host server)
 - ✅ **Tích hợp Claude Code skill** — chỉ cần `/create-news-video <url>` là xong
 - ✅ **Mở rộng được**: schema rõ ràng, code modular, có test suite
 
@@ -35,7 +35,7 @@ Pipeline tự động làm các bước:
 |---|---|
 | **Runtime** | Node.js ≥ 22, TypeScript 5+, ESM |
 | **Render engine** | [HyperFrames](https://hyperframes.heygen.com) (Puppeteer + GSAP + FFmpeg) |
-| **TTS providers** | [LucyLab.io](https://lucylab.io) (JSON-RPC, Vietnamese cloning) hoặc [ElevenLabs](https://elevenlabs.io) (REST, multilingual) |
+| **TTS providers** | [LucyLab.io](https://lucylab.io) (JSON-RPC, Vietnamese cloning), [ElevenLabs](https://elevenlabs.io) (REST, multilingual) hoặc VieNeu-TTS remote mode (self-hosted) |
 | **Validation** | [Zod](https://zod.dev) (discriminated union schema) |
 | **HTTP** | axios + nock (mocking) |
 | **Testing** | Vitest |
@@ -82,7 +82,7 @@ Pipeline tự động làm các bước:
 **Khuyến nghị:**
 - 🇻🇳 **Chỉ làm video tiếng Việt** → chọn **LucyLab** (rẻ + giọng tự nhiên + có SRT)
 - 🌍 **Làm đa ngôn ngữ hoặc cần voice library lớn** → chọn **ElevenLabs**
-- 🔄 **Không chắc** → bắt đầu với LucyLab, đổi sang ElevenLabs sau (chỉ cần đổi `TTS_PROVIDER` trong `.env.local`)
+- 🔄 **Không chắc** → bắt đầu với LucyLab; khi muốn tự host thì chuyển sang VieNeu hoặc dùng ElevenLabs khi cần voice cloud
 
 #### 🛡️ Zod — schema validation an toàn
 
@@ -152,7 +152,7 @@ npm install
 
 # 3. Tạo file env và điền API key
 cp .env.example .env.local
-# → mở .env.local, chọn TTS provider (lucylab hoặc elevenlabs) và điền key
+# → mở .env.local, chọn TTS provider (lucylab, elevenlabs hoặc vieneu) và điền key
 
 # 4. Verify cài đặt
 node --version       # ≥ 22
@@ -163,7 +163,7 @@ npm test             # all tests pass (35 tests)
 
 ### 🔑 Cấu hình API key
 
-Mở `.env.local` và chọn **một trong hai provider**:
+Mở `.env.local` và chọn **một trong ba provider**:
 
 #### Option 1: LucyLab.io (khuyến nghị cho tiếng Việt)
 - Đăng ký tại https://lucylab.io
@@ -191,6 +191,34 @@ TTS_PROVIDER=elevenlabs
 ELEVENLABS_API_KEY=sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL
 ELEVENLABS_MODEL_ID=eleven_multilingual_v2
+```
+
+### Option C — VieNeu-TTS (remote mode, self-hosted)
+
+- Install `vieneu` on the pipeline machine: `pip install vieneu`
+- Run a separate VieNeu server and point `.env.local` at its base URL
+- Set `TTS_PROVIDER=vieneu`
+- Optionally set `VIENEU_VOICE_ID` to pin a preset voice; leave blank to use the model/server default voice
+
+```env
+TTS_PROVIDER=vieneu
+VIENEU_API_BASE=http://your-server-ip:23333/v1
+VIENEU_MODEL_ID=pnnbao-ump/VieNeu-TTS
+VIENEU_VOICE_ID=
+```
+
+### Option C — VieNeu-TTS (remote mode, self-hosted)
+
+- Cài `vieneu` trên máy chạy pipeline: `pip install vieneu`
+- Chạy VieNeu server riêng, rồi set base URL của server vào `.env.local`
+- Đặt `TTS_PROVIDER=vieneu`
+- Có thể set `VIENEU_VOICE_ID` nếu muốn cố định preset voice; nếu bỏ trống sẽ dùng giọng mặc định của server/model
+
+```env
+TTS_PROVIDER=vieneu
+VIENEU_API_BASE=http://your-server-ip:23333/v1
+VIENEU_MODEL_ID=pnnbao-ump/VieNeu-TTS
+VIENEU_VOICE_ID=
 ```
 
 ### 🎵 Cấu hình TikTok follow card (outro)
@@ -336,7 +364,7 @@ npx tsc --noEmit         # type-check không build
 
 | Lỗi | Cách khắc phục |
 |---|---|
-| `Missing VIETNAMESE_API_KEY` / `Missing ELEVENLABS_API_KEY` | Kiểm tra `.env.local` đã có và đúng `TTS_PROVIDER` |
+| `Missing VIETNAMESE_API_KEY` / `Missing ELEVENLABS_API_KEY` / `Missing VIENEU_API_BASE` | Kiểm tra `.env.local` đã có và đúng `TTS_PROVIDER` |
 | `hyperframes render failed` | Chạy `npx hyperframes render --help` verify CLI; Chrome cài chưa? |
 | `LucyLab polling timeout` | Tăng `LUCYLAB_POLL_TIMEOUT_MS` trong `.env.local` (default 120000ms) |
 | `ElevenLabs 401 Invalid API key` | Verify key trên dashboard ElevenLabs, paste lại vào `.env.local` |
@@ -377,7 +405,7 @@ The pipeline automates the following steps:
 
 - ✅ **HeyGen-quality look**: persistent brand shell (icon, channel name, handle), grain texture, navy gradient with cyan + purple accents
 - ✅ **6 scene template types** auto-picked by content — never monotonous
-- ✅ **Multi-provider TTS**: LucyLab (natural Vietnamese + free SRT) or ElevenLabs (multilingual, large voice library)
+- ✅ **Multi-provider TTS**: LucyLab (natural Vietnamese + free SRT), ElevenLabs (multilingual), or VieNeu-TTS remote mode (self-hosted)
 - ✅ **Claude Code skill integration** — just type `/create-news-video <url>` and you're done
 - ✅ **Extensible**: clean schema, modular code, full test suite
 
@@ -387,7 +415,7 @@ The pipeline automates the following steps:
 |---|---|
 | **Runtime** | Node.js ≥ 22, TypeScript 5+, ESM |
 | **Render engine** | [HyperFrames](https://hyperframes.heygen.com) (Puppeteer + GSAP + FFmpeg) |
-| **TTS providers** | [LucyLab.io](https://lucylab.io) (JSON-RPC, Vietnamese cloning) or [ElevenLabs](https://elevenlabs.io) (REST, multilingual) |
+| **TTS providers** | [LucyLab.io](https://lucylab.io) (JSON-RPC, Vietnamese cloning), [ElevenLabs](https://elevenlabs.io) (REST, multilingual), or VieNeu-TTS remote mode (self-hosted) |
 | **Validation** | [Zod](https://zod.dev) (discriminated union schema) |
 | **HTTP** | axios + nock (mocking) |
 | **Testing** | Vitest |
@@ -434,7 +462,7 @@ The pipeline automates the following steps:
 **Recommendation:**
 - 🇻🇳 **Vietnamese-only videos** → use **LucyLab** (cheap + natural + with SRT)
 - 🌍 **Multilingual or need large voice library** → use **ElevenLabs**
-- 🔄 **Not sure** → start with LucyLab, switch later (just change `TTS_PROVIDER` in `.env.local`)
+- 🔄 **Not sure** → start with LucyLab; switch to VieNeu for self-hosted remote TTS or ElevenLabs for cloud voices
 
 #### 🛡️ Zod — type-safe schema validation
 
@@ -504,7 +532,7 @@ npm install
 
 # 3. Create env file and fill in API keys
 cp .env.example .env.local
-# → open .env.local, choose TTS provider (lucylab or elevenlabs) and fill key
+# → open .env.local, choose TTS provider (lucylab, elevenlabs, or vieneu) and fill key
 
 # 4. Verify installation
 node --version       # ≥ 22
@@ -515,7 +543,7 @@ npm test             # all 35 tests should pass
 
 ### 🔑 API Key Configuration
 
-Open `.env.local` and pick **one of two providers**:
+Open `.env.local` and pick **one of three providers**:
 
 #### Option 1: LucyLab.io (recommended for Vietnamese)
 - Sign up at https://lucylab.io
@@ -688,7 +716,7 @@ npx tsc --noEmit         # type-check without build
 
 | Error | Fix |
 |---|---|
-| `Missing VIETNAMESE_API_KEY` / `Missing ELEVENLABS_API_KEY` | Check `.env.local` exists and `TTS_PROVIDER` matches |
+| `Missing VIETNAMESE_API_KEY` / `Missing ELEVENLABS_API_KEY` / `Missing VIENEU_API_BASE` | Check `.env.local` exists and `TTS_PROVIDER` matches |
 | `hyperframes render failed` | Run `npx hyperframes render --help` to verify CLI; is Chrome installed? |
 | `LucyLab polling timeout` | Increase `LUCYLAB_POLL_TIMEOUT_MS` in `.env.local` (default 120000ms) |
 | `ElevenLabs 401 Invalid API key` | Verify key on ElevenLabs dashboard, re-paste into `.env.local` |

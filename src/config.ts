@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-export type TtsProvider = "lucylab" | "elevenlabs";
+export type TtsProvider = "lucylab" | "elevenlabs" | "vieneu";
 
 export interface TiktokConfig {
   displayName: string;
@@ -26,6 +26,11 @@ export interface Config {
   elevenlabsModelId: string;
   elevenlabsEndpoint: string;
 
+  // VieNeu-TTS (remote mode)
+  vieneuApiBase?: string;
+  vieneuModelId: string;
+  vieneuVoiceId?: string;
+
   // TikTok follow card (outro)
   tiktok: TiktokConfig;
 
@@ -42,8 +47,8 @@ function intDefault(name: string, def: number): number {
 
 export function loadConfig(): Config {
   const provider = (process.env.TTS_PROVIDER ?? "lucylab") as TtsProvider;
-  if (provider !== "lucylab" && provider !== "elevenlabs") {
-    throw new Error(`TTS_PROVIDER must be "lucylab" or "elevenlabs", got "${provider}"`);
+  if (provider !== "lucylab" && provider !== "elevenlabs" && provider !== "vieneu") {
+    throw new Error(`TTS_PROVIDER must be "lucylab", "elevenlabs" or "vieneu", got "${provider}"`);
   }
 
   // Validate provider-specific required vars
@@ -60,7 +65,7 @@ export function loadConfig(): Config {
         `Copy .env.example to .env.local and fill in your LucyLab voice ID.`
       );
     }
-  } else {
+  } else if (provider === "elevenlabs") {
     if (!process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_API_KEY.trim() === "") {
       throw new Error(
         `Missing ELEVENLABS_API_KEY (required when TTS_PROVIDER=elevenlabs). ` +
@@ -71,6 +76,13 @@ export function loadConfig(): Config {
       throw new Error(
         `Missing ELEVENLABS_VOICE_ID (required when TTS_PROVIDER=elevenlabs). ` +
         `Copy .env.example to .env.local and fill in your ElevenLabs voice ID.`
+      );
+    }
+  } else {
+    if (!process.env.VIENEU_API_BASE || process.env.VIENEU_API_BASE.trim() === "") {
+      throw new Error(
+        `Missing VIENEU_API_BASE (required when TTS_PROVIDER=vieneu). ` +
+        `Copy .env.example to .env.local and fill in your VieNeu remote server URL.`
       );
     }
   }
@@ -86,6 +98,9 @@ export function loadConfig(): Config {
     elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
     elevenlabsModelId: process.env.ELEVENLABS_MODEL_ID ?? "eleven_multilingual_v2",
     elevenlabsEndpoint: process.env.ELEVENLABS_ENDPOINT ?? "https://api.elevenlabs.io/v1",
+    vieneuApiBase: process.env.VIENEU_API_BASE,
+    vieneuModelId: process.env.VIENEU_MODEL_ID ?? "pnnbao-ump/VieNeu-TTS",
+    vieneuVoiceId: process.env.VIENEU_VOICE_ID,
     tiktok: {
       displayName: process.env.TIKTOK_DISPLAY_NAME ?? "Công nghệ 24h",
       handle: process.env.TIKTOK_HANDLE ?? "@congnghe24h",

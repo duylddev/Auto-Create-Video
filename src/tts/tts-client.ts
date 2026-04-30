@@ -16,6 +16,7 @@ export interface TtsClient {
 import type { Config } from "../config.js";
 import { LucylabClient } from "./lucylab-client.js";
 import { ElevenLabsClient } from "./elevenlabs-client.js";
+import { VieneuClient } from "./vieneu-client.js";
 
 export function createTtsClient(cfg: Config): TtsClient {
   switch (cfg.ttsProvider) {
@@ -33,6 +34,12 @@ export function createTtsClient(cfg: Config): TtsClient {
         voiceId: cfg.elevenlabsVoiceId!,
         modelId: cfg.elevenlabsModelId,
         endpoint: cfg.elevenlabsEndpoint,
+      });
+    case "vieneu":
+      return new VieneuClient({
+        apiBase: cfg.vieneuApiBase!,
+        modelId: cfg.vieneuModelId,
+        voiceId: cfg.vieneuVoiceId,
       });
     default: {
       const _never: never = cfg.ttsProvider;
